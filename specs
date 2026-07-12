@@ -1,0 +1,185 @@
+Compressed Meta-Spec
+
+Purpose
+
+Define a compact, actionable governance constitution that is both machine-verifiable and human-auditable, while preserving five system invariants:
+
+- Identity — the system can prove what it is and whether it remains continuous with prior states.
+- Evidence — claims are always backed by traceable records.
+- Verification — claims are independently checked before becoming canonical.
+- Understanding — authorized humans can still explain why the system acts.
+- Recoverability — failures, upgrades, and disputes can be reversed or safely contained.
+- Change — the system can evolve without losing the above invariants.
+
+Canonical Idea
+
+Governance is represented through a small set of composable artifacts.
+Every meaningful operation must produce, update, or validate one or more of these artifacts.
+No operation is canonical unless its artifacts are complete, attestable, and traceable.
+
+Canonical Artifacts
+
+1) Identity Record
+
+Defines what the system is, what version/state it is in, and what continuity it claims.
+
+Required fields:
+
+- system identifier
+- canonical state identifier
+- lineage reference
+- preserved invariants
+- declared changes
+- unresolved continuity risks
+
+2) Evidence Bundle
+
+Collects the facts, inputs, historical records, and external references supporting a claim.
+
+Required fields:
+
+- claim being supported
+- source provenance
+- relevance basis
+- limitations
+- confidence level
+- contestation path
+
+3) Verification Package
+
+Proves that a claim or implementation was checked by valid methods and independent reviewers.
+
+Required fields:
+
+- verification method(s)
+- independence analysis
+- test results
+- adversarial results
+- semantic equivalence status
+- verifier attestations
+
+4) Understanding Layer
+
+Provides human-auditable representations of purpose, structure, critical paths, and risks.
+
+Required fields:
+
+- purpose summary
+- rule/architecture summary
+- critical-path explanation
+- major risks
+- current uncertainties
+- operational boundaries
+
+5) Recoverability Plan
+
+Defines how the system rolls back, quarantines, repairs, or restores after failure or dispute.
+
+Required fields:
+
+- failure triggers
+- containment actions
+- rollback mechanism
+- recovery steps
+- restoration criteria
+- audit trail requirements
+
+6) Evolution Package
+
+Required for any upgrade, migration, extension, or architectural change.
+
+Required fields:
+
+- continuity proof
+- preserved invariants
+- modified invariants
+- removed capabilities
+- new capabilities
+- second-order impact assessment
+- recovery and rollback guarantees
+- independent attestation
+
+Core Protocols
+
+A. Canonicalization
+
+A claim, state, or change becomes canonical only if:
+
+1. it has an identity reference,
+2. it is supported by evidence,
+3. it passes verification,
+4. it remains understandable to authorized reviewers,
+5. it preserves recoverability,
+6. it does not violate continuity constraints.
+
+B. Contestation
+
+Any canonical artifact may be challenged through a bounded, auditable contestation path.
+
+A valid contestation must:
+
+- identify the target artifact,
+- state the challenge basis,
+- provide evidence,
+- define the burden of proof,
+- preserve provisional safety,
+- produce a ledgered outcome.
+
+C. Recursion Control
+
+Any self-referential validation or meta-review must be bounded.
+
+Requirements:
+
+- declared recursion depth,
+- completion criteria,
+- fallback to highest validated state,
+- recorded meta-uncertainty,
+- no infinite regress.
+
+D. Upgrade Control
+
+Any evolution must be staged.
+
+Stages:
+
+1. proposal
+2. impact assessment
+3. verification
+4. independent attestation
+5. limited activation
+6. monitoring
+7. commit or rollback
+
+E. Drift and Metric Control
+
+If measurements, thresholds, or verification tools diverge from intended outcomes:
+
+- downgrade trust,
+- contain impact,
+- revalidate,
+- record the full trace.
+
+Enforcement Rule
+
+No governance action is valid unless it produces a complete artifact set appropriate to its scope.
+
+Minimal requirement:
+
+Action = Identity + Evidence + Verification + Understanding + Recoverability
+
+For change operations, add:
+
+Action = Identity + Evidence + Verification + Understanding + Recoverability + Evolution
+
+Final Invariant
+
+The system may change only in ways that preserve its ability to:
+
+- know what it is,
+- justify what it claims,
+- verify what it does,
+- explain what it means,
+- recover when it fails.
+
+Anything that breaks one of those invariants is not an upgrade; it is a replacement or a failure.
