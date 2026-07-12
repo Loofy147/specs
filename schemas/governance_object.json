@@ -110,205 +110,6 @@
       "title": "EvolutionPackage",
       "type": "object"
     },
-    "GovernanceObject": {
-      "description": "Representing the Canonical Object Schema that wraps all governance objects.",
-      "properties": {
-        "object_id": {
-          "description": "Globally unique immutable identifier.",
-          "title": "Object Id",
-          "type": "string"
-        },
-        "object_type": {
-          "$ref": "#/$defs/ObjectTypeEnum",
-          "description": "Type of the governance object."
-        },
-        "status": {
-          "$ref": "#/$defs/StatusEnum",
-          "description": "Status of the object in the runtime model."
-        },
-        "version": {
-          "description": "Monotonic version label for the object.",
-          "title": "Version",
-          "type": "integer"
-        },
-        "parent_reference": {
-          "description": "Reference to the prior object or state from which this derives.",
-          "title": "Parent Reference",
-          "type": "string"
-        },
-        "provenance": {
-          "description": "Source chain, origin context, and creation path.",
-          "title": "Provenance",
-          "type": "string"
-        },
-        "evidence_bundle": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/EvidenceBundle"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Traceable support for the object claim."
-        },
-        "verification_package": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/VerificationPackage"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Independent validation results."
-        },
-        "understanding_layer": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/UnderstandingLayer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Human-auditable explanation of purpose."
-        },
-        "recoverability_plan": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RecoverabilityPlan"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Rollback and restoration instructions."
-        },
-        "evolution_package": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/EvolutionPackage"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Present if change is involved."
-        },
-        "contestation_state": {
-          "default": "uncontested",
-          "description": "Current challenge status ('uncontested' or challenge IDs).",
-          "title": "Contestation State",
-          "type": "string"
-        },
-        "trust_tier": {
-          "default": "standard",
-          "description": "Current authority class or confidence class.",
-          "title": "Trust Tier",
-          "type": "string"
-        },
-        "timestamps": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "description": "Creation, validation, activation, review, and expiry timestamps.",
-          "title": "Timestamps",
-          "type": "object"
-        },
-        "signatures": {
-          "description": "Cryptographic or attestational signatures required for authority.",
-          "items": {
-            "type": "string"
-          },
-          "title": "Signatures",
-          "type": "array"
-        }
-      },
-      "required": [
-        "object_id",
-        "object_type",
-        "status",
-        "version",
-        "parent_reference",
-        "provenance"
-      ],
-      "title": "GovernanceObject",
-      "type": "object"
-    },
-    "LedgerEntry": {
-      "description": "Ledger Requirement: Representing an immutable ledger trace of a status transition.",
-      "properties": {
-        "previous_status": {
-          "$ref": "#/$defs/StatusEnum",
-          "description": "Previous state status."
-        },
-        "new_status": {
-          "$ref": "#/$defs/StatusEnum",
-          "description": "New state status."
-        },
-        "reason_for_transition": {
-          "description": "Rationale/reason for the transition.",
-          "title": "Reason For Transition",
-          "type": "string"
-        },
-        "evidence_reference": {
-          "description": "Trace reference to the evidence backing transition.",
-          "title": "Evidence Reference",
-          "type": "string"
-        },
-        "verifier_reference": {
-          "description": "Verifier attestation/package reference.",
-          "title": "Verifier Reference",
-          "type": "string"
-        },
-        "contestation_reference": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Reference to contestation record if applicable.",
-          "title": "Contestation Reference"
-        },
-        "rollback_reference": {
-          "description": "Rollback path reference.",
-          "title": "Rollback Reference",
-          "type": "string"
-        },
-        "timestamp": {
-          "description": "ISO UTC timestamp of the ledger record.",
-          "title": "Timestamp",
-          "type": "string"
-        },
-        "signer_identity": {
-          "description": "Identity of the authority signing the transition.",
-          "title": "Signer Identity",
-          "type": "string"
-        }
-      },
-      "required": [
-        "previous_status",
-        "new_status",
-        "reason_for_transition",
-        "evidence_reference",
-        "verifier_reference",
-        "rollback_reference",
-        "timestamp",
-        "signer_identity"
-      ],
-      "title": "LedgerEntry",
-      "type": "object"
-    },
     "ObjectTypeEnum": {
       "enum": [
         "identity_record",
@@ -499,59 +300,133 @@
       "type": "object"
     }
   },
-  "description": "Defines the canonical state of the system, including its current active\nGovernanceObject, ledger history, drift metrics, and active protocols.",
+  "description": "Representing the Canonical Object Schema that wraps all governance objects.",
   "properties": {
-    "current_object": {
-      "$ref": "#/$defs/GovernanceObject",
-      "description": "The current active GovernanceObject representing system state."
+    "object_id": {
+      "description": "Globally unique immutable identifier.",
+      "title": "Object Id",
+      "type": "string"
     },
-    "ledger": {
-      "description": "Immutable ledger of state status transitions.",
-      "items": {
-        "$ref": "#/$defs/LedgerEntry"
+    "object_type": {
+      "$ref": "#/$defs/ObjectTypeEnum",
+      "description": "Type of the governance object."
+    },
+    "status": {
+      "$ref": "#/$defs/StatusEnum",
+      "description": "Status of the object in the runtime model."
+    },
+    "version": {
+      "description": "Monotonic version label for the object.",
+      "title": "Version",
+      "type": "integer"
+    },
+    "parent_reference": {
+      "description": "Reference to the prior object or state from which this derives.",
+      "title": "Parent Reference",
+      "type": "string"
+    },
+    "provenance": {
+      "description": "Source chain, origin context, and creation path.",
+      "title": "Provenance",
+      "type": "string"
+    },
+    "evidence_bundle": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EvidenceBundle"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Traceable support for the object claim."
+    },
+    "verification_package": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VerificationPackage"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Independent validation results."
+    },
+    "understanding_layer": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/UnderstandingLayer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Human-auditable explanation of purpose."
+    },
+    "recoverability_plan": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RecoverabilityPlan"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Rollback and restoration instructions."
+    },
+    "evolution_package": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EvolutionPackage"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Present if change is involved."
+    },
+    "contestation_state": {
+      "default": "uncontested",
+      "description": "Current challenge status ('uncontested' or challenge IDs).",
+      "title": "Contestation State",
+      "type": "string"
+    },
+    "trust_tier": {
+      "default": "standard",
+      "description": "Current authority class or confidence class.",
+      "title": "Trust Tier",
+      "type": "string"
+    },
+    "timestamps": {
+      "additionalProperties": {
+        "type": "string"
       },
-      "title": "Ledger",
-      "type": "array"
+      "description": "Creation, validation, activation, review, and expiry timestamps.",
+      "title": "Timestamps",
+      "type": "object"
     },
-    "active_protocols": {
-      "description": "Currently active protocols.",
+    "signatures": {
+      "description": "Cryptographic or attestational signatures required for authority.",
       "items": {
         "type": "string"
       },
-      "title": "Active Protocols",
-      "type": "array"
-    },
-    "drift_metrics": {
-      "additionalProperties": true,
-      "description": "Metrics tracking system or verification drift.",
-      "title": "Drift Metrics",
-      "type": "object"
-    },
-    "trust_level": {
-      "default": "HIGH",
-      "description": "Current trust level of the system ('HIGH', 'DOWNGRADED').",
-      "title": "Trust Level",
-      "type": "string"
-    },
-    "is_emergency": {
-      "default": false,
-      "description": "Whether the system is in containment/emergency mode.",
-      "title": "Is Emergency",
-      "type": "boolean"
-    },
-    "history": {
-      "description": "General audit log of state operations.",
-      "items": {
-        "additionalProperties": true,
-        "type": "object"
-      },
-      "title": "History",
+      "title": "Signatures",
       "type": "array"
     }
   },
   "required": [
-    "current_object"
+    "object_id",
+    "object_type",
+    "status",
+    "version",
+    "parent_reference",
+    "provenance"
   ],
-  "title": "SystemState",
+  "title": "GovernanceObject",
   "type": "object"
 }

@@ -1,8 +1,9 @@
 import datetime
+from pydantic import ValidationError
 from typing import List, Dict, Any, Optional
 from governance.models import (
-    SystemState, SystemStateEnum, GovernanceAction, IdentityRecord, EvidenceBundle,
-    VerificationPackage, UnderstandingLayer, RecoverabilityPlan, EvolutionPackage
+    SystemState, StatusEnum, ObjectTypeEnum, GovernanceObject, LedgerEntry,
+    GovernanceAction, EvidenceBundle, VerificationPackage, UnderstandingLayer, RecoverabilityPlan, EvolutionPackage
 )
 
 class GovernanceError(Exception):
@@ -20,9 +21,8 @@ class ProtocolViolationError(GovernanceError):
 
 class GovernanceStateMachine:
     """
-    Enforces the Master Governance Constitution and Governance Runtime Model.
-    Manages explicit runtime states, transitions, decision gates, dependency order,
-    and invariant preservation.
+    Enforces the Transition Contract, Canonical Object Schema,
+    predicates, and Ledger requirements of the Governance Runtime Contract.
     """
 
     def __init__(self, initial_state: SystemState):
@@ -32,417 +32,222 @@ class GovernanceStateMachine:
         self._upgrade_proposal: Optional[Dict[str, Any]] = None
 
     def get_current_state(self) -> SystemState:
-        """Returns the current canonical system state."""
+        """Returns the current system state."""
         return self.state
 
-    def _verify_authority(self, action: GovernanceAction) -> bool:
+    def _preserve_invariants(self, previous_obj: GovernanceObject, new_obj: GovernanceObject):
         """
-        Enforces Section 5 (Authority Rules):
-        Authority is valid only when declared, attested, traceable, and reviewable.
+        Enforces Section 4: State Transition Invariants.
+        Every transition must preserve identity, evidence traceability, verification independence,
+        human comprehensibility, recoverability, auditability, and bounded recursion.
         """
-        if not action.verification_package or not action.verification_package.verifier_attestations:
-            return False
-        if not action.evidence_bundle or not action.evidence_bundle.source_provenance:
-            return False
-        if not action.evidence_bundle.contestation_path:
-            return False
+        # 1. Identity continuity
+        if previous_obj.object_id != new_obj.object_id:
+            raise InvariantViolationError("Invariant Violation: Object ID cannot change (Identity continuity broken).")
+        if new_obj.version < previous_obj.version:
+            raise InvariantViolationError("Invariant Violation: Version must be monotonic.")
+        if new_obj.parent_reference != previous_obj.parent_reference and new_obj.parent_reference != previous_obj.object_id:
+            # Must point either to same parent or previous object itself
+            raise InvariantViolationError("Invariant Violation: Parent reference must align.")
+
+        # 2. Evidence traceability
+        if new_obj.evidence_bundle:
+            if not new_obj.evidence_bundle.claim_being_supported or not new_obj.evidence_bundle.source_provenance:
+                raise InvariantViolationError("Invariant Violation: Evidence traceability broken.")
+
+        # 3. Verification independence
+        if new_obj.verification_package:
+            if not new_obj.verification_package.verifier_attestations or not new_obj.verification_package.independence_analysis:
+                raise InvariantViolationError("Invariant Violation: Verification independence broken.")
+
+        # 4. Human comprehensibility
+        if new_obj.understanding_layer:
+            if len(new_obj.understanding_layer.purpose_summary) < 10:
+                raise InvariantViolationError("Invariant Violation: Human comprehensibility summary is too brief.")
+
+        # 5. Recoverability
+        if new_obj.recoverability_plan:
+            if not new_obj.recoverability_plan.rollback_mechanism:
+                raise InvariantViolationError("Invariant Violation: Recoverability plan lacks defined rollback.")
+
+        # Bounded recursion
+        self.evaluate_recursive_process(1, 10)
+
+    def evaluate_recursive_process(self, current_depth: int, max_depth: int) -> bool:
+        """Enforces recursion control: no infinite regress."""
+        if current_depth > max_depth:
+            raise ProtocolViolationError(f"Recursion depth limit exceeded: {current_depth} > {max_depth}")
         return True
 
-    def _preserve_invariants(self, action: GovernanceAction):
+    def transition_to(self, target_status: StatusEnum, reason: str, action_obj: Optional[GovernanceObject] = None, signer_identity: str = "authority-01") -> SystemState:
         """
-        Enforces Governance Runtime Model Rule 6 (Invariant Preservation Rule):
-        Any transition must preserve identity, evidence traceability, verifier independence,
-        human comprehensibility, and rollback availability.
+        Enforces Section 3: Transition Contract conditions, Integrity Predicates,
+        Invariants, and appends a corresponding Section 9 LedgerEntry.
         """
-        # 1. Continuity of Identity
-        if action.identity_record:
-            if action.identity_record.system_identifier != self.state.identity_record.system_identifier:
-                raise InvariantViolationError("Invariant Violation: Continuity of identity broken (system mismatch).")
+        current_obj = self.state.current_object
+        current_status = current_obj.status
 
-            # Lineage continuity check
-            # If transitioning to a new canonical state identifier:
-            if action.identity_record.canonical_state_identifier != self.state.identity_record.canonical_state_identifier:
-                if action.identity_record.lineage_reference != self.state.identity_record.canonical_state_identifier:
-                    raise InvariantViolationError("Invariant Violation: Continuity of lineage broken.")
-            else:
-                # Staying on same state identifier, lineage reference must match current lineage reference
-                if action.identity_record.lineage_reference != self.state.identity_record.lineage_reference:
-                    raise InvariantViolationError("Invariant Violation: Continuity of lineage broken (lineage reference mismatch).")
-
-        # 2. Traceability of Evidence
-        if action.evidence_bundle:
-            if not action.evidence_bundle.claim_being_supported or not action.evidence_bundle.source_provenance:
-                raise InvariantViolationError("Invariant Violation: Traceability of evidence is not preserved.")
-
-        # 3. Verifier Independence
-        if action.verification_package:
-            if not action.verification_package.verifier_attestations or not action.verification_package.independence_analysis:
-                raise InvariantViolationError("Invariant Violation: Verifier independence is not preserved.")
-
-        # 4. Human Comprehensibility
-        if action.understanding_layer:
-            if len(action.understanding_layer.purpose_summary) < 10:
-                raise InvariantViolationError("Invariant Violation: Human comprehensibility of the action is too brief.")
-
-        # 5. Rollback Availability
-        if action.recoverability_plan:
-            if not action.recoverability_plan.rollback_mechanism:
-                raise InvariantViolationError("Invariant Violation: Rollback availability is missing.")
-
-    def can_execute_decision(self, action: GovernanceAction) -> bool:
-        """
-        Enforces Governance Runtime Model Section 4 (Decision Gate):
-        A decision may be executed only when all of the following are true:
-        - the current state is Canonical
-        - the required artifacts are present
-        - verifiers are valid and independent
-        - no active contestation blocks authority
-        - no containment state is active
-        - the action is within authorized scope
-        """
-        if self.state.runtime_state != SystemStateEnum.CANONICAL:
-            return False
-        if not self.state.is_canonical:
-            return False
-        if not action.verification_package or not action.verification_package.verifier_attestations:
-            return False
-        # Verifier success check
-        test_results = action.verification_package.test_results
-        if test_results.get("failed", 0) > 0 or test_results.get("success") is False:
-            return False
-        return True
-
-    def execute_decision(self, action: GovernanceAction) -> SystemState:
-        """
-        Enforces the Decision Gate and executes a valid action in Canonical state.
-        """
-        if not self.can_execute_decision(action):
-            raise ProtocolViolationError("Decision Gate failed: state is not Canonical or required conditions not met.")
-
-        self._preserve_invariants(action)
-
-        # Record decision execution
-        timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        history_entry = {
-            "timestamp": timestamp,
-            "event": "DECISION_EXECUTED",
-            "action_type": action.action_type,
-            "previous_state_id": self.state.identity_record.canonical_state_identifier,
-            "new_state_id": action.identity_record.canonical_state_identifier
-        }
-
-        # Apply action to build new SystemState
-        new_state = SystemState(
-            runtime_state=SystemStateEnum.CANONICAL,
-            identity_record=action.identity_record,
-            last_evidence_bundle=action.evidence_bundle,
-            last_verification_package=action.verification_package,
-            last_understanding_layer=action.understanding_layer,
-            last_recoverability_plan=action.recoverability_plan,
-            last_evolution_package=action.evolution_package,
-            active_protocols=self.state.active_protocols,
-            drift_metrics=self.state.drift_metrics,
-            trust_level=self.state.trust_level,
-            is_emergency=self.state.is_emergency,
-            history=self.state.history + [history_entry]
-        )
-
-        self.state = new_state
-        return self.state
-
-    def transition_to(self, target_state: SystemStateEnum, action: Optional[GovernanceAction] = None) -> SystemState:
-        """
-        Enforces Governance Runtime Model Section 3 (Transition Rules):
-        """
-        current = self.state.runtime_state
-
-        if current == target_state:
+        if current_status == target_status:
             return self.state
 
-        # Enforce transition rules and prerequisites
-        if current == SystemStateEnum.DRAFT and target_state == SystemStateEnum.PROVISIONAL:
-            # Requires: initial evidence, initial review, declared scope
-            if not action or not action.evidence_bundle or not action.understanding_layer:
-                raise ProtocolViolationError("Draft -> Provisional transition requires initial evidence and understanding layer.")
-            if not action.understanding_layer.operational_boundaries:
-                raise ProtocolViolationError("Draft -> Provisional transition requires declared scope/boundaries.")
+        # Use the action_obj if provided, else build one from the current object with the target status
+        new_obj_data = current_obj.model_dump()
+        new_obj_data["status"] = target_status
+        if action_obj:
+            # Merge fields from action_obj to update artifacts or metadata
+            for field, val in action_obj.model_dump(exclude_unset=True).items():
+                if val is not None:
+                    new_obj_data[field] = val
 
-        elif current == SystemStateEnum.PROVISIONAL and target_state == SystemStateEnum.CANONICAL:
-            # Requires: complete artifacts, independent attestation, successful validation, no unresolved critical risks
-            if not action:
-                raise ProtocolViolationError("Provisional -> Canonical transition requires a complete action.")
-            # Verify complete artifacts
-            if not (action.identity_record and action.evidence_bundle and action.verification_package
-                    and action.understanding_layer and action.recoverability_plan):
-                raise ProtocolViolationError("Provisional -> Canonical transition requires all 5 standard artifacts.")
-            # Verify no unresolved critical risks
-            if action.identity_record.unresolved_continuity_risks:
-                raise ProtocolViolationError("Provisional -> Canonical transition blocked: unresolved continuity risks exist.")
-            # Verify authority (Section 5)
-            if not self._verify_authority(action):
-                raise ProtocolViolationError("Authority rules check failed (Section 5 violation).")
-            # Verify test validation
-            if action.verification_package.test_results.get("failed", 0) > 0:
-                raise ProtocolViolationError("Successful validation required for Canonical transition.")
+        # Ensure version increments for state updates/transitions
+        new_obj_data["version"] = current_obj.version + 1
+        new_obj_data["parent_reference"] = current_obj.object_id
 
-        elif current == SystemStateEnum.CANONICAL and target_state == SystemStateEnum.CONTESTED:
-            # Requires: valid challenge, evidence basis, contestation registration
-            if not action or not action.evidence_bundle or not action.evidence_bundle.claim_being_supported:
-                raise ProtocolViolationError("Canonical -> Contested transition requires evidence of challenge.")
+        # Instantiate target object and validate schema/dependency rules
+        try:
+            target_obj = GovernanceObject(**new_obj_data)
+        except ValidationError as e:
+            raise ProtocolViolationError(f"Validation Error during transition instantiation: {e}")
 
-        elif (current in (SystemStateEnum.CANONICAL, SystemStateEnum.PROVISIONAL)) and target_state == SystemStateEnum.CONTAINED:
-            # Requires: drift threshold breach, semantic mismatch, verifier failure, authority compromise, external trigger
+        # Enforce transition rules
+        if current_status == StatusEnum.DRAFT and target_status == StatusEnum.PROVISIONAL:
+            # Requires: minimal provenance, initial evidence, initial scope declaration
+            if not target_obj.provenance:
+                raise ProtocolViolationError("Draft -> Provisional requires minimal provenance.")
+            if not target_obj.evidence_bundle:
+                raise ProtocolViolationError("Draft -> Provisional requires initial evidence.")
+            if not target_obj.understanding_layer or not target_obj.understanding_layer.operational_boundaries:
+                raise ProtocolViolationError("Draft -> Provisional requires initial scope declaration.")
+
+        elif current_status == StatusEnum.PROVISIONAL and target_status == StatusEnum.CANONICAL:
+            # Requires: complete required artifacts, independent validation, semantic equivalence verification,
+            # no unresolved critical risks, explicit activation signature
+            if not (target_obj.evidence_bundle and target_obj.verification_package and
+                    target_obj.understanding_layer and target_obj.recoverability_plan):
+                raise ProtocolViolationError("Provisional -> Canonical requires all 4 standard artifacts.")
+            if not target_obj.signatures:
+                raise ProtocolViolationError("Provisional -> Canonical requires explicit activation signatures.")
+            if target_obj.verification_package.semantic_equivalence_status != "IDENTICAL":
+                raise ProtocolViolationError("Provisional -> Canonical requires semantic equivalence validation.")
+
+        elif current_status == StatusEnum.CANONICAL and target_status == StatusEnum.CONTESTED:
+            # Requires: valid challenge submission, evidence basis, contestation registration, ledger entry
+            if target_obj.contestation_state == "uncontested":
+                raise ProtocolViolationError("Canonical -> Contested requires active contestation state registration.")
+
+        elif (current_status in (StatusEnum.CANONICAL, StatusEnum.PROVISIONAL)) and target_status == StatusEnum.CONTAINED:
+            # Requires: containment conditions (drift, mismatch, verifier compromise, etc.)
             pass
 
-        elif current == SystemStateEnum.CONTAINED and target_state == SystemStateEnum.RECOVERY:
-            # Requires: containment acknowledgement, repair plan, bounded restoration scope
-            if not action or not action.recoverability_plan:
-                raise ProtocolViolationError("Contained -> Recovery transition requires a recoverability/repair plan.")
-            if not action.recoverability_plan.recovery_steps:
-                raise ProtocolViolationError("Contained -> Recovery transition requires repair steps.")
+        elif current_status == StatusEnum.CONTAINED and target_status == StatusEnum.RECOVERY:
+            # Requires: containment acknowledgment, restoration plan, bounded recovery scope, repair path
+            if not target_obj.recoverability_plan or not target_obj.recoverability_plan.recovery_steps:
+                raise ProtocolViolationError("Contained -> Recovery requires restoration plan and recovery steps.")
 
-        elif current == SystemStateEnum.RECOVERY and target_state == SystemStateEnum.CANONICAL:
-            # Requires: successful revalidation, integrity proof, restoration attestation
-            if not action or not action.verification_package or not action.evolution_package:
-                raise ProtocolViolationError("Recovery -> Canonical transition requires verification and evolution integrity proof.")
-            if not action.verification_package.verifier_attestations:
-                raise ProtocolViolationError("Recovery -> Canonical transition requires verifier attestations.")
+        elif current_status == StatusEnum.RECOVERY and target_status == StatusEnum.CANONICAL:
+            # Requires: successful repair validation, integrity proof, rollback readiness, independent reauthorization
+            if not target_obj.verification_package or not target_obj.evolution_package:
+                raise ProtocolViolationError("Recovery -> Canonical requires validation package and evolution proof.")
+            if not target_obj.signatures:
+                raise ProtocolViolationError("Recovery -> Canonical requires independent reauthorization signatures.")
+
+        elif current_status == StatusEnum.CANONICAL and target_status == StatusEnum.DEPRECATED:
+            # Requires: reassessment outcome, replacement path, no active unresolved critical dependence
+            if "deprecated" not in target_obj.timestamps:
+                target_obj.timestamps["deprecated"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+        elif current_status == StatusEnum.CANONICAL and target_status == StatusEnum.REVOKED:
+            # Requires: decisive invalidation, immediate containment, successor state path
+            if "revoked" not in target_obj.timestamps:
+                target_obj.timestamps["revoked"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
         else:
-            raise ProtocolViolationError(f"Direct transition from {current} to {target_state} is invalid under Runtime Model.")
+            raise ProtocolViolationError(f"Direct transition from {current_status} to {target_status} is invalid under Transition Contract.")
 
-        # If an action was provided, ensure it preserves invariants
-        if action:
-            self._preserve_invariants(action)
+        # Ensure transition preserves invariants
+        self._preserve_invariants(current_obj, target_obj)
 
-        # Execute the transition
-        timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        history_entry = {
-            "timestamp": timestamp,
-            "event": "STATE_TRANSITION",
-            "from_state": current.value,
-            "to_state": target_state.value
-        }
+        # Construct and append Section 9 LedgerEntry
+        timestamp_str = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        ledger_entry = LedgerEntry(
+            previous_status=current_status,
+            new_status=target_status,
+            reason_for_transition=reason,
+            evidence_reference=target_obj.evidence_bundle.contestation_path if target_obj.evidence_bundle else "none",
+            verifier_reference=target_obj.verification_package.independence_analysis if target_obj.verification_package else "none",
+            contestation_reference=target_obj.contestation_state if target_obj.contestation_state != "uncontested" else None,
+            rollback_reference=target_obj.recoverability_plan.rollback_mechanism if target_obj.recoverability_plan else "none",
+            timestamp=timestamp_str,
+            signer_identity=signer_identity
+        )
 
-        # Build updated SystemState
+        # Update timestamps inside GovernanceObject
+        target_obj.timestamps["transition"] = timestamp_str
+
+        # Build new SystemState
         new_state = SystemState(
-            runtime_state=target_state,
-            identity_record=action.identity_record if action and action.identity_record else self.state.identity_record,
-            last_evidence_bundle=action.evidence_bundle if action and action.evidence_bundle else self.state.last_evidence_bundle,
-            last_verification_package=action.verification_package if action and action.verification_package else self.state.last_verification_package,
-            last_understanding_layer=action.understanding_layer if action and action.understanding_layer else self.state.last_understanding_layer,
-            last_recoverability_plan=action.recoverability_plan if action and action.recoverability_plan else self.state.last_recoverability_plan,
-            last_evolution_package=action.evolution_package if action and action.evolution_package else self.state.last_evolution_package,
+            current_object=target_obj,
+            ledger=self.state.ledger + [ledger_entry],
             active_protocols=self.state.active_protocols,
             drift_metrics=self.state.drift_metrics,
-            trust_level="DOWNGRADED" if target_state in (SystemStateEnum.CONTESTED, SystemStateEnum.CONTAINED) else self.state.trust_level,
-            is_emergency=True if target_state == SystemStateEnum.CONTAINED else self.state.is_emergency,
-            history=self.state.history + [history_entry]
+            trust_level="DOWNGRADED" if target_status in (StatusEnum.CONTESTED, StatusEnum.CONTAINED) else self.state.trust_level,
+            is_emergency=True if target_status == StatusEnum.CONTAINED else self.state.is_emergency,
+            history=self.state.history + [{
+                "event": "STATE_TRANSITION",
+                "timestamp": timestamp_str,
+                "previous_status": current_status.value,
+                "new_status": target_status.value,
+                "reason": reason
+            }]
         )
 
         self.state = new_state
         return self.state
 
-    def challenge_artifact(self, target_artifact: str, basis: str, evidence: str, burden_of_proof: str) -> Dict[str, Any]:
-        """
-        Enforces Section 4.2 (Contestation Protocol):
-        Any canonical artifact may be challenged. Transitions system to CONTESTED state.
-        """
-        if not target_artifact or not basis or not evidence or not burden_of_proof:
-            raise ProtocolViolationError("Contestation requires target_artifact, basis, evidence, and burden_of_proof.")
-
-        # Transition state to CONTESTED
-        challenge_action = GovernanceAction(
-            action_type="CONTESTATION",
-            identity_record=self.state.identity_record,
+    def challenge_object(self, challenge_id: str, basis: str, evidence_ref: str) -> SystemState:
+        """Enforces transition to CONTESTED when an object is challenged."""
+        challenge_action = GovernanceObject(
+            object_id=self.state.current_object.object_id,
+            object_type=self.state.current_object.object_type,
+            status=StatusEnum.CONTESTED,
+            version=self.state.current_object.version,
+            parent_reference=self.state.current_object.parent_reference,
+            provenance=self.state.current_object.provenance,
+            contestation_state=challenge_id,
             evidence_bundle=EvidenceBundle(
-                claim_being_supported=f"Challenge of {target_artifact}",
-                source_provenance="Independent Challenger",
+                claim_being_supported=f"Challenge: {challenge_id}",
+                source_provenance=evidence_ref,
                 relevance_basis=basis,
                 limitations="None",
                 confidence_level=0.9,
-                contestation_path="/contestation/review"
+                contestation_path=f"/contestation/{challenge_id}"
             )
         )
-        self.transition_to(SystemStateEnum.CONTESTED, action=challenge_action)
+        return self.transition_to(StatusEnum.CONTESTED, reason=f"Challenge {challenge_id} submitted", action_obj=challenge_action)
 
-        outcome = {
-            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            "target_artifact": target_artifact,
-            "basis": basis,
-            "evidence": evidence,
-            "burden_of_proof": burden_of_proof,
-            "provisional_status": "CHALLENGED",
-            "action_taken": "System state transitioned to CONTESTED and trust level downgraded."
-        }
+    def trigger_containment(self, reason: str, metric_name: Optional[str] = None, value: Optional[float] = None, threshold: Optional[float] = None) -> SystemState:
+        """Enforces transition to CONTAINED due to drift or invalidation."""
+        if metric_name:
+            self.state.drift_metrics[metric_name] = {
+                "value": value,
+                "threshold": threshold,
+                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+            }
 
-        return outcome
-
-    def evaluate_recursive_process(self, current_depth: int, max_depth: int) -> bool:
-        """
-        Enforces Section 4.3 (Recursion Control Protocol):
-        No infinite regress is permitted.
-        """
-        if current_depth > max_depth:
-            raise ProtocolViolationError(
-                f"Recursion depth limit exceeded. Current depth {current_depth} > max limit {max_depth}."
-            )
-        return True
-
-    def propose_upgrade(self, proposal_id: str, description: str):
-        """
-        Initiates Section 4.4 (Upgrade Control Protocol) - Stage 1 (Proposal).
-        """
-        self._upgrade_proposal = {
-            "proposal_id": proposal_id,
-            "description": description,
-            "stage": "PROPOSAL",
-            "stages_history": ["PROPOSAL"],
-            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
-        }
-
-    def advance_upgrade_stage(self, stage: str):
-        """
-        Enforces advancement through stages:
-        1. PROPOSAL, 2. IMPACT_ASSESSMENT, 3. VERIFICATION, 4. ATTESTATION,
-        5. LIMITED_ACTIVATION, 6. MONITORING, 7. COMMIT_OR_ROLLBACK (transition method commits)
-        """
-        if not self._upgrade_proposal:
-            raise ProtocolViolationError("No active upgrade proposal found to advance.")
-
-        valid_stages = [
-            "PROPOSAL", "IMPACT_ASSESSMENT", "VERIFICATION",
-            "ATTESTATION", "LIMITED_ACTIVATION", "MONITORING"
-        ]
-
-        if stage not in valid_stages:
-            raise ProtocolViolationError(f"Invalid upgrade stage: '{stage}'.")
-
-        current_stage = self._upgrade_proposal["stage"]
-        current_index = valid_stages.index(current_stage)
-        target_index = valid_stages.index(stage)
-
-        if target_index != current_index + 1:
-            raise ProtocolViolationError(
-                f"Invalid stage transition. Cannot transition from '{current_stage}' to '{stage}' directly."
-            )
-
-        self._upgrade_proposal["stage"] = stage
-        self._upgrade_proposal["stages_history"].append(stage)
-
-    def abort_upgrade(self, reason: str) -> Dict[str, Any]:
-        """Aborts and rolls back the current upgrade proposal."""
-        if not self._upgrade_proposal:
-            raise ProtocolViolationError("No active upgrade proposal to abort.")
-
-        abort_record = {
-            "proposal_id": self._upgrade_proposal["proposal_id"],
-            "last_stage": self._upgrade_proposal["stage"],
-            "reason": reason,
-            "action": "ROLLBACK",
-            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
-        }
-
-        self.state.history.append({
-            "event": "UPGRADE_ABORTED",
-            "timestamp": abort_record["timestamp"],
-            "record": abort_record
-        })
-
-        self._upgrade_proposal = None
-        return abort_record
-
-    def record_metric_drift(self, metric_name: str, value: float, threshold: float):
-        """
-        Enforces Section 4.5 (Drift and Metric Control Protocol):
-        Exceeding threshold triggers automated transition to CONTAINED state.
-        """
-        self.state.drift_metrics[metric_name] = {
-            "value": value,
-            "threshold": threshold,
-            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
-        }
-
-        if value > threshold:
-            drift_action = GovernanceAction(
-                action_type="DRIFT",
-                identity_record=self.state.identity_record,
-                evidence_bundle=EvidenceBundle(
-                    claim_being_supported=f"Metric Drift Alert: {metric_name}",
-                    source_provenance="Verification Monitor",
-                    relevance_basis=f"Divergence value {value} exceeded threshold {threshold}.",
-                    limitations="None",
-                    confidence_level=1.0,
-                    contestation_path="/drift/review"
-                )
-            )
-            self.transition_to(SystemStateEnum.CONTAINED, action=drift_action)
-
-    def declare_emergency(self, trigger: str, scope: str, duration_hours: int):
-        """
-        Enforces Section 4.7 (Containment and Emergency Protocol):
-        Transition state to CONTAINED.
-        """
-        if not trigger or not scope or duration_hours <= 0:
-            raise ProtocolViolationError("Emergency declaration requires a trigger, scope, and positive duration limit.")
-
-        emergency_action = GovernanceAction(
-            action_type="EMERGENCY",
-            identity_record=self.state.identity_record,
+        containment_action = GovernanceObject(
+            object_id=self.state.current_object.object_id,
+            object_type=self.state.current_object.object_type,
+            status=StatusEnum.CONTAINED,
+            version=self.state.current_object.version,
+            parent_reference=self.state.current_object.parent_reference,
+            provenance=self.state.current_object.provenance,
             evidence_bundle=EvidenceBundle(
-                claim_being_supported=f"Emergency trigger: {trigger}",
-                source_provenance="System Admin",
-                relevance_basis=scope,
+                claim_being_supported=f"Containment: {reason}",
+                source_provenance="Monitoring Tool",
+                relevance_basis=f"Triggered containment: {reason}",
                 limitations="None",
                 confidence_level=1.0,
-                contestation_path="/emergency/review"
+                contestation_path="/containment/review"
             )
         )
-        self.transition_to(SystemStateEnum.CONTAINED, action=emergency_action)
-
-    def resolve_emergency(self, retrospective_review: str):
-        """Resolves emergency mode after performing an obligatory retrospective audit."""
-        if self.state.runtime_state != SystemStateEnum.CONTAINED:
-            raise ProtocolViolationError("System is not currently in CONTAINED mode.")
-
-        if len(retrospective_review) < 15:
-            raise ProtocolViolationError("Retrospective audit must be substantive before resolving emergency.")
-
-        # Transition state back to RECOVERY, then to CANONICAL
-        recovery_action = GovernanceAction(
-            action_type="RECOVERY",
-            identity_record=self.state.identity_record,
-            evidence_bundle=EvidenceBundle(
-                claim_being_supported="Emergency resolution and recovery",
-                source_provenance="System Admin",
-                relevance_basis="Audit trail completion",
-                limitations="None",
-                confidence_level=1.0,
-                contestation_path="/emergency/resolve"
-            ),
-            verification_package=VerificationPackage(
-                verification_methods=["retrospective-audit"],
-                independence_analysis="Internal audit check",
-                test_results={"success": True},
-                adversarial_results={},
-                semantic_equivalence_status="OK",
-                verifier_attestations=["admin-sig"]
-            ),
-            understanding_layer=UnderstandingLayer(
-                purpose_summary="Substantive audit details of resolved emergency",
-                rule_architecture_summary="Audit review",
-                critical_path_explanation="None",
-                major_risks=[],
-                current_uncertainties=[],
-                operational_boundaries=[]
-            ),
-            recoverability_plan=RecoverabilityPlan(
-                failure_triggers=["Manual override"],
-                containment_actions=["Audit trails"],
-                rollback_mechanism="Snapshot restoration",
-                recovery_steps=["Review logs", "Check signatures"],
-                restoration_criteria=["All verifications pass"],
-                audit_trail_requirements=["Ledger retrospective review"]
-            )
-        )
-        self.transition_to(SystemStateEnum.RECOVERY, action=recovery_action)
+        return self.transition_to(StatusEnum.CONTAINED, reason=f"Containment triggered: {reason}", action_obj=containment_action)

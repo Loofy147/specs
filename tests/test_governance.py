@@ -1,10 +1,9 @@
 import pytest
-import copy
 from pydantic import ValidationError
 from governance.models import (
     IdentityRecord, EvidenceBundle, VerificationPackage,
     UnderstandingLayer, RecoverabilityPlan, EvolutionPackage,
-    GovernanceAction, SystemState, SystemStateEnum
+    GovernanceObject, LedgerEntry, ObjectTypeEnum, StatusEnum, SystemState
 )
 from governance.state_machine import (
     GovernanceStateMachine, GovernanceError, InvariantViolationError, ProtocolViolationError
@@ -13,324 +12,271 @@ from governance.state_machine import (
 # --- Helper Fixtures ---
 
 @pytest.fixture
-def base_identity():
-    return IdentityRecord(
-        system_identifier="SYS-A",
-        canonical_state_identifier="STATE-0",
-        lineage_reference="ROOT-0",
-        preserved_invariants=["Identity", "Evidence", "Verification", "Understanding", "Recoverability"],
-        declared_changes=["Initial genesis setup"],
-        unresolved_continuity_risks=[]
+def initial_draft_object():
+    return GovernanceObject(
+        object_id="GOV-OBJ-100",
+        object_type=ObjectTypeEnum.STATE_TRANSITION,
+        status=StatusEnum.DRAFT,
+        version=1,
+        parent_reference="ROOT-0",
+        provenance="CI/CD Build Pipeline",
+        timestamps={"created": "2026-07-12T12:00:00Z"},
+        signatures=[]
     )
 
 @pytest.fixture
-def draft_state(base_identity):
+def base_system_state(initial_draft_object):
     return SystemState(
-        runtime_state=SystemStateEnum.DRAFT,
-        identity_record=base_identity,
-        active_protocols=["Canonicalization", "Contestation", "Recursion", "Upgrade", "Drift"],
+        current_object=initial_draft_object,
+        ledger=[],
+        active_protocols=["Canonicalization", "Contestation", "Drift"],
         drift_metrics={},
         trust_level="HIGH",
         is_emergency=False,
         history=[]
     )
 
-@pytest.fixture
-def compliant_action_data():
-    return {
-        "action_type": "STANDARD",
-        "identity_record": {
-            "system_identifier": "SYS-A",
-            "canonical_state_identifier": "STATE-1",
-            "lineage_reference": "STATE-0",
-            "preserved_invariants": ["Identity", "Evidence"],
-            "declared_changes": ["Update schema validation rules"],
-            "unresolved_continuity_risks": []
-        },
-        "evidence_bundle": {
-            "claim_being_supported": "Verification tool update is safe and compliant",
-            "source_provenance": "CI/CD automated pipeline build #34",
-            "relevance_basis": "Shows matching tests and independent verification",
-            "limitations": "Does not cover legacy hardware integrations",
-            "confidence_level": 0.95,
-            "contestation_path": "/contestation/SYS-A/STATE-1"
-        },
-        "verification_package": {
-            "verification_methods": ["automated-unit-tests", "manual-peer-review"],
-            "independence_analysis": "Verified by independent QA team and pipeline validation",
-            "test_results": {"passed": 42, "failed": 0, "total": 42},
-            "adversarial_results": {"fuzzing": "passed", "red-team": "no vulnerabilities found"},
-            "semantic_equivalence_status": "IDENTICAL",
-            "verifier_attestations": ["attestation-signature-qa-lead-01"]
-        },
-        "understanding_layer": {
-            "purpose_summary": "This action updates the system schema validators for enhanced compliance tracking.",
-            "rule_architecture_summary": "Updates models.py with strict Pydantic field validation controls.",
-            "critical_path_explanation": "Critical path runs through Pydantic validators and the canonical state machine.",
-            "major_risks": ["Minor schema migration overhead during high load"],
-            "current_uncertainties": ["None"],
-            "operational_boundaries": ["Limits validator updates to non-breaking change definitions"]
-        },
-        "recoverability_plan": {
-            "failure_triggers": ["State machine rejects valid action structures"],
-            "containment_actions": ["Rollback model imports to version 1.1.2"],
-            "rollback_mechanism": "Git checkout tag v1.1.2 and re-verify",
-            "recovery_steps": ["Trigger containment actions", "Verify prior state continuity", "Revalidate dependencies"],
-            "restoration_criteria": ["All automated unit tests pass in production sandbox"],
-            "audit_trail_requirements": ["Logs must be written to read-only compliance storage"]
-        }
-    }
 
+# --- Model Validation & Dependency Tests ---
 
-# --- Artifact Dependency Order Tests ---
-
-def test_artifact_dependency_order_validation():
-    # Valid order: ID + Evidence + Verification
-    action_ok = GovernanceAction(
-        action_type="PROPOSAL",
-        identity_record=IdentityRecord(
-            system_identifier="SYS-A",
-            canonical_state_identifier="STATE-1",
-            lineage_reference="STATE-0"
-        ),
-        evidence_bundle=EvidenceBundle(
-            claim_being_supported="Support proposal",
-            source_provenance="Source",
-            relevance_basis="Basis",
-            limitations="None",
-            confidence_level=0.9,
-            contestation_path="/path"
-        ),
-        verification_package=VerificationPackage(
-            verification_methods=["unit"],
-            independence_analysis="QA",
-            test_results={},
-            adversarial_results={},
-            semantic_equivalence_status="OK",
-            verifier_attestations=["A1"]
-        )
+def test_governance_object_dependency_validation():
+    # Valid model with no higher dependencies (level 1 only)
+    obj = GovernanceObject(
+        object_id="GOV-1",
+        object_type=ObjectTypeEnum.IDENTITY_RECORD,
+        status=StatusEnum.DRAFT,
+        version=1,
+        parent_reference="ROOT-0",
+        provenance="Author",
+        signatures=[]
     )
-    assert action_ok is not None
+    assert obj is not None
 
-    # Invalid order: has Verification Package but no Evidence Bundle (dependency broken)
+    # Invalid: has understanding_layer but missing evidence_bundle (broken dependency chain)
     with pytest.raises(ValidationError) as excinfo:
-        GovernanceAction(
-            action_type="PROPOSAL",
-            identity_record=IdentityRecord(
-                system_identifier="SYS-A",
-                canonical_state_identifier="STATE-1",
-                lineage_reference="STATE-0"
+        GovernanceObject(
+            object_id="GOV-2",
+            object_type=ObjectTypeEnum.IDENTITY_RECORD,
+            status=StatusEnum.CANONICAL,
+            version=1,
+            parent_reference="ROOT-0",
+            provenance="Author",
+            understanding_layer=UnderstandingLayer(
+                purpose_summary="Explain purpose of this state change",
+                rule_architecture_summary="Arch summary",
+                critical_path_explanation="Critical path info",
+                major_risks=[],
+                current_uncertainties=[],
+                operational_boundaries=[]
             ),
-            verification_package=VerificationPackage(
-                verification_methods=["unit"],
-                independence_analysis="QA",
-                test_results={},
-                adversarial_results={},
-                semantic_equivalence_status="OK",
-                verifier_attestations=["A1"]
-            )
+            signatures=[]
         )
     assert "Artifact dependency order violated" in str(excinfo.value)
 
 
-# --- System Runtime State Transition Tests ---
-
-def test_draft_to_provisional_transition(draft_state):
-    gsm = GovernanceStateMachine(draft_state)
-    assert gsm.state.runtime_state == SystemStateEnum.DRAFT
-
-    # Attempt transition without required action artifacts
-    bad_action = GovernanceAction(
-        action_type="TRANSITION",
-        identity_record=gsm.state.identity_record
+def test_canonical_object_validation():
+    # Draft is allowed to be sparse
+    draft_obj = GovernanceObject(
+        object_id="GOV-3",
+        object_type=ObjectTypeEnum.STATE_TRANSITION,
+        status=StatusEnum.DRAFT,
+        version=1,
+        parent_reference="ROOT-0",
+        provenance="Author"
     )
-    with pytest.raises(ProtocolViolationError):
-        gsm.transition_to(SystemStateEnum.PROVISIONAL, action=bad_action)
+    assert draft_obj is not None
 
-    # Compliant transition action (ID + EV + VP + UL)
-    good_action = GovernanceAction(
-        action_type="TRANSITION",
-        identity_record=gsm.state.identity_record,
+    # CANONICAL requires complete required artifacts, timestamps, and active authority signatures
+    with pytest.raises(ValidationError) as excinfo:
+        GovernanceObject(
+            object_id="GOV-3",
+            object_type=ObjectTypeEnum.STATE_TRANSITION,
+            status=StatusEnum.CANONICAL,
+            version=1,
+            parent_reference="ROOT-0",
+            provenance="Author"
+        )
+    assert "Canonicalization Rule Violated" in str(excinfo.value)
+
+
+# --- Transition Contract Tests ---
+
+def test_draft_to_provisional_transition(base_system_state):
+    gsm = GovernanceStateMachine(base_system_state)
+    assert gsm.state.current_object.status == StatusEnum.DRAFT
+
+    # Fail: missing evidence bundle & scope
+    with pytest.raises(ProtocolViolationError):
+        gsm.transition_to(StatusEnum.PROVISIONAL, reason="First step")
+
+    # Valid Provisional transition action
+    action_obj = GovernanceObject(
+        object_id="GOV-OBJ-100",
+        object_type=ObjectTypeEnum.STATE_TRANSITION,
+        status=StatusEnum.PROVISIONAL,
+        version=2,
+        parent_reference="GOV-OBJ-100",
+        provenance="CI/CD Build Pipeline",
         evidence_bundle=EvidenceBundle(
-            claim_being_supported="Transition proposal",
-            source_provenance="Internal Team",
-            relevance_basis="Basis of transition",
+            claim_being_supported="State draft is functional",
+            source_provenance="Unit Tests",
+            relevance_basis="Basis",
             limitations="None",
-            confidence_level=0.9,
+            confidence_level=0.95,
+            contestation_path="/path"
+        ),
+        understanding_layer=UnderstandingLayer(
+            purpose_summary="Transition system to provisional mode for testing",
+            rule_architecture_summary="Arch description",
+            critical_path_explanation="Critical path flow",
+            operational_boundaries=["Boundary 1"]
+        )
+    )
+
+    gsm.transition_to(StatusEnum.PROVISIONAL, reason="Transition to Provisional", action_obj=action_obj)
+    assert gsm.state.current_object.status == StatusEnum.PROVISIONAL
+    assert len(gsm.state.ledger) == 1
+    assert gsm.state.ledger[0].previous_status == StatusEnum.DRAFT
+    assert gsm.state.ledger[0].new_status == StatusEnum.PROVISIONAL
+
+
+def test_provisional_to_canonical_transition(base_system_state):
+    gsm = GovernanceStateMachine(base_system_state)
+    # Set state as PROVISIONAL
+    gsm.state.current_object.status = StatusEnum.PROVISIONAL
+
+    # Incomplete artifacts
+    with pytest.raises(ProtocolViolationError):
+        gsm.transition_to(StatusEnum.CANONICAL, reason="Publish to canonical")
+
+    # Compliant canonical action
+    action_obj = GovernanceObject(
+        object_id="GOV-OBJ-100",
+        object_type=ObjectTypeEnum.STATE_TRANSITION,
+        status=StatusEnum.CANONICAL,
+        version=2,
+        parent_reference="GOV-OBJ-100",
+        provenance="CI/CD Build Pipeline",
+        evidence_bundle=EvidenceBundle(
+            claim_being_supported="Full system state is stable",
+            source_provenance="Automation Tests",
+            relevance_basis="Relevance basis of evidence",
+            limitations="None",
+            confidence_level=0.98,
+            contestation_path="/contestation/100"
+        ),
+        verification_package=VerificationPackage(
+            verification_methods=["e2e-integration-tests"],
+            independence_analysis="QA independent signoff",
+            test_results={"passed": 12, "failed": 0},
+            adversarial_results={},
+            semantic_equivalence_status="IDENTICAL",
+            verifier_attestations=["reviewer-signature-01"]
+        ),
+        understanding_layer=UnderstandingLayer(
+            purpose_summary="Full release audit and architectural summary",
+            rule_architecture_summary="Arch description of canonical release",
+            critical_path_explanation="Critical path runs cleanly",
+            operational_boundaries=["None"]
+        ),
+        recoverability_plan=RecoverabilityPlan(
+            failure_triggers=["Test failure"],
+            containment_actions=["Rollback version"],
+            rollback_mechanism="Standard Git rollback",
+            recovery_steps=["Review logs"],
+            restoration_criteria=["All tests clear"],
+            audit_trail_requirements=["Read-only audit database logging"]
+        ),
+        timestamps={"creation": "2026-07-12T12:00:00Z", "activation": "2026-07-12T14:00:00Z"},
+        signatures=["admin-attestation-signature"]
+    )
+
+    gsm.transition_to(StatusEnum.CANONICAL, reason="Authorize Canonical Status", action_obj=action_obj)
+    assert gsm.state.current_object.status == StatusEnum.CANONICAL
+    assert gsm.state.ledger[0].new_status == StatusEnum.CANONICAL
+
+
+def test_contestation_and_containment_transitions(base_system_state):
+    gsm = GovernanceStateMachine(base_system_state)
+    gsm.state.current_object.status = StatusEnum.CANONICAL
+
+    # Challenge
+    gsm.challenge_object("challenge-102", "Telemetry indicates memory leaks.", "Telemetry logs #45")
+    assert gsm.state.current_object.status == StatusEnum.CONTESTED
+    assert gsm.state.current_object.contestation_state == "challenge-102"
+    assert len(gsm.state.ledger) == 1
+    assert gsm.state.ledger[0].new_status == StatusEnum.CONTESTED
+
+    # Drift triggers CONTAINED state
+    gsm.state.current_object.status = StatusEnum.CANONICAL
+    gsm.trigger_containment("High divergency in verifier node metrics.", "node_divergence", 0.18, 0.10)
+    assert gsm.state.current_object.status == StatusEnum.CONTAINED
+    assert gsm.state.is_emergency is True
+
+
+def test_emergency_recovery_flow(base_system_state):
+    gsm = GovernanceStateMachine(base_system_state)
+    gsm.state.current_object.status = StatusEnum.CONTAINED
+
+    # Invalid: missing recoverability plan or recovery steps
+    with pytest.raises(ProtocolViolationError):
+        gsm.transition_to(StatusEnum.RECOVERY, reason="Begin repair")
+
+    # Compliant recovery action
+    recovery_action = GovernanceObject(
+        object_id="GOV-OBJ-100",
+        object_type=ObjectTypeEnum.STATE_TRANSITION,
+        status=StatusEnum.RECOVERY,
+        version=2,
+        parent_reference="GOV-OBJ-100",
+        provenance="Security Team",
+        evidence_bundle=EvidenceBundle(
+            claim_being_supported="Recovery is active",
+            source_provenance="Security Team",
+            relevance_basis="Basis",
+            limitations="None",
+            confidence_level=1.0,
             contestation_path="/path"
         ),
         verification_package=VerificationPackage(
-            verification_methods=["dry-run"],
-            independence_analysis="Internal check",
+            verification_methods=["audit"],
+            independence_analysis="QA review",
             test_results={},
             adversarial_results={},
             semantic_equivalence_status="OK",
-            verifier_attestations=["signer-0"]
+            verifier_attestations=["review-sig"]
         ),
         understanding_layer=UnderstandingLayer(
-            purpose_summary="Explain the transition in detail",
-            rule_architecture_summary="Architecture info",
-            critical_path_explanation="Critical path info",
-            operational_boundaries=["Scope limit 1"]
-        )
-    )
-
-    gsm.transition_to(SystemStateEnum.PROVISIONAL, action=good_action)
-    assert gsm.state.runtime_state == SystemStateEnum.PROVISIONAL
-
-
-def test_provisional_to_canonical_transition(draft_state, compliant_action_data):
-    # Setup state in PROVISIONAL
-    gsm = GovernanceStateMachine(draft_state)
-    gsm.state.runtime_state = SystemStateEnum.PROVISIONAL
-
-    # Action with unresolved critical risks
-    risky_action_data = copy.deepcopy(compliant_action_data)
-    risky_action_data["identity_record"]["unresolved_continuity_risks"] = ["Critical security risk"]
-    risky_action = GovernanceAction(**risky_action_data)
-
-    with pytest.raises(ProtocolViolationError) as excinfo:
-        gsm.transition_to(SystemStateEnum.CANONICAL, action=risky_action)
-    assert "unresolved continuity risks exist" in str(excinfo.value)
-
-    # Compliant Canonical action
-    compliant_action = GovernanceAction(**compliant_action_data)
-    gsm.transition_to(SystemStateEnum.CANONICAL, action=compliant_action)
-    assert gsm.state.runtime_state == SystemStateEnum.CANONICAL
-    assert gsm.state.is_canonical is True
-
-
-# --- Decision Gate and Executions ---
-
-def test_decision_gate_and_executions(draft_state, compliant_action_data):
-    gsm = GovernanceStateMachine(draft_state)
-    action = GovernanceAction(**compliant_action_data)
-
-    # 1. Blocked when not Canonical
-    assert gsm.state.runtime_state == SystemStateEnum.DRAFT
-    assert gsm.can_execute_decision(action) is False
-    with pytest.raises(ProtocolViolationError):
-        gsm.execute_decision(action)
-
-    # 2. Setup Canonical state
-    gsm.state.runtime_state = SystemStateEnum.CANONICAL
-    # Fill required artifacts on state to make it canonical
-    gsm.state.last_evidence_bundle = action.evidence_bundle
-    gsm.state.last_verification_package = action.verification_package
-    gsm.state.last_understanding_layer = action.understanding_layer
-    gsm.state.last_recoverability_plan = action.recoverability_plan
-    assert gsm.state.is_canonical is True
-
-    # 3. Successful execution when Canonical and artifacts present
-    assert gsm.can_execute_decision(action) is True
-    new_state = gsm.execute_decision(action)
-    assert new_state.runtime_state == SystemStateEnum.CANONICAL
-
-
-# --- Contestation Protocol & Transition ---
-
-def test_contestation_and_transition(draft_state, compliant_action_data):
-    gsm = GovernanceStateMachine(draft_state)
-    # Put state into Canonical
-    action = GovernanceAction(**compliant_action_data)
-    gsm.state.runtime_state = SystemStateEnum.CANONICAL
-    gsm.state.last_evidence_bundle = action.evidence_bundle
-    gsm.state.last_verification_package = action.verification_package
-    gsm.state.last_understanding_layer = action.understanding_layer
-    gsm.state.last_recoverability_plan = action.recoverability_plan
-
-    # Challenge
-    outcome = gsm.challenge_artifact(
-        target_artifact="last_evidence_bundle",
-        basis="Telemetry suggests inaccuracies.",
-        evidence="Telemetry log #102",
-        burden_of_proof="QA verification"
-    )
-
-    assert gsm.state.runtime_state == SystemStateEnum.CONTESTED
-    assert outcome["provisional_status"] == "CHALLENGED"
-
-
-# --- Drift, Emergency, and Recovery Transitions ---
-
-def test_drift_triggers_contained_state(draft_state):
-    gsm = GovernanceStateMachine(draft_state)
-    gsm.state.runtime_state = SystemStateEnum.CANONICAL
-
-    # Metric drift over threshold
-    gsm.record_metric_drift("monitor_divergence", 0.15, 0.10)
-    assert gsm.state.runtime_state == SystemStateEnum.CONTAINED
-
-
-def test_emergency_declaration_triggers_contained_state(draft_state):
-    gsm = GovernanceStateMachine(draft_state)
-    gsm.state.runtime_state = SystemStateEnum.CANONICAL
-
-    # Declare Emergency
-    gsm.declare_emergency(
-        trigger="Compromised credentials detected",
-        scope="Lockdown transition controls",
-        duration_hours=12
-    )
-    assert gsm.state.runtime_state == SystemStateEnum.CONTAINED
-
-
-def test_emergency_resolution_and_recovery_flow(draft_state):
-    gsm = GovernanceStateMachine(draft_state)
-    gsm.state.runtime_state = SystemStateEnum.CONTAINED
-
-    # Resolve emergency substantively
-    gsm.resolve_emergency(
-        "Substantive review complete. All systems secure and audited successfully."
-    )
-    # resolve_emergency transitions CONTAINED -> RECOVERY
-    assert gsm.state.runtime_state == SystemStateEnum.RECOVERY
-
-    # Transition RECOVERY -> CANONICAL
-    recovery_resolution_action = GovernanceAction(
-        action_type="RECOVERY",
-        identity_record=gsm.state.identity_record,
-        evidence_bundle=EvidenceBundle(
-            claim_being_supported="Recovery is safe and complete",
-            source_provenance="Security Team",
-            relevance_basis="Revalidation logs",
-            limitations="None",
-            confidence_level=0.95,
-            contestation_path="/contestation/recovery"
-        ),
-        verification_package=VerificationPackage(
-            verification_methods=["all-clear-verification"],
-            independence_analysis="QA independent reviewer",
-            test_results={"failed": 0, "passed": 10},
-            adversarial_results={},
-            semantic_equivalence_status="IDENTICAL",
-            verifier_attestations=["signature-verifier-01"]
-        ),
-        understanding_layer=UnderstandingLayer(
-            purpose_summary="Transition system back to standard CANONICAL operations",
-            rule_architecture_summary="Restore state rules",
-            critical_path_explanation="Restoration of canonical access",
-            operational_boundaries=["Boundaries unchanged"]
+            purpose_summary="Comprehensive recovery explanation log",
+            rule_architecture_summary="Audit summary of system nodes",
+            critical_path_explanation="None",
+            operational_boundaries=[]
         ),
         recoverability_plan=RecoverabilityPlan(
-            failure_triggers=["Validation failure"],
-            containment_actions=["Rollback to recovery mode"],
-            rollback_mechanism="Standard mechanism",
-            recovery_steps=["Review"],
-            restoration_criteria=["All clear"],
-            audit_trail_requirements=["Compliance logging"]
-        ),
-        evolution_package=EvolutionPackage(
-            continuity_proof="Continuous lineage proof back to state 0.",
-            preserved_invariants=["Identity"],
-            modified_invariants=[],
-            removed_capabilities=[],
-            new_capabilities=[],
-            second_order_impact_assessment="No performance impact.",
-            recovery_and_rollback_guarantees="Guaranteed safety",
-            independent_attestation="Attested by QA lead"
+            failure_triggers=["Drift trigger"],
+            containment_actions=["Audit logs"],
+            rollback_mechanism="Rollback tool",
+            recovery_steps=["Reset nodes", "Rerun verifier checks"],
+            restoration_criteria=["All verifications pass"],
+            audit_trail_requirements=["Write logs"]
         )
     )
 
-    gsm.transition_to(SystemStateEnum.CANONICAL, action=recovery_resolution_action)
-    assert gsm.state.runtime_state == SystemStateEnum.CANONICAL
+    gsm.transition_to(StatusEnum.RECOVERY, reason="Initiate recovery repairs", action_obj=recovery_action)
+    assert gsm.state.current_object.status == StatusEnum.RECOVERY
+
+
+def test_deprecation_and_revocation(base_system_state):
+    gsm = GovernanceStateMachine(base_system_state)
+    gsm.state.current_object.status = StatusEnum.CANONICAL
+
+    # Deprecate
+    gsm.transition_to(StatusEnum.DEPRECATED, reason="Retire legacy component")
+    assert gsm.state.current_object.status == StatusEnum.DEPRECATED
+    assert "deprecated" in gsm.state.current_object.timestamps
+
+    # Revoke
+    gsm.state.current_object.status = StatusEnum.CANONICAL
+    gsm.transition_to(StatusEnum.REVOKED, reason="Invalidated due to security keys breach")
+    assert gsm.state.current_object.status == StatusEnum.REVOKED
+    assert "revoked" in gsm.state.current_object.timestamps

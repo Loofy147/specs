@@ -110,56 +110,152 @@
       "title": "EvolutionPackage",
       "type": "object"
     },
-    "IdentityRecord": {
-      "description": "Defines canonical state, lineage, continuity claim, preserved invariants,\nand unresolved continuity risks.",
+    "GovernanceObject": {
+      "description": "Representing the Canonical Object Schema that wraps all governance objects.",
       "properties": {
-        "system_identifier": {
-          "description": "Defines what the system is.",
-          "title": "System Identifier",
+        "object_id": {
+          "description": "Globally unique immutable identifier.",
+          "title": "Object Id",
           "type": "string"
         },
-        "canonical_state_identifier": {
-          "description": "What version/state it is in.",
-          "title": "Canonical State Identifier",
+        "object_type": {
+          "$ref": "#/$defs/ObjectTypeEnum",
+          "description": "Type of the governance object."
+        },
+        "status": {
+          "$ref": "#/$defs/StatusEnum",
+          "description": "Status of the object in the runtime model."
+        },
+        "version": {
+          "description": "Monotonic version label for the object.",
+          "title": "Version",
+          "type": "integer"
+        },
+        "parent_reference": {
+          "description": "Reference to the prior object or state from which this derives.",
+          "title": "Parent Reference",
           "type": "string"
         },
-        "lineage_reference": {
-          "description": "Continuous lineage reference/parent hash.",
-          "title": "Lineage Reference",
+        "provenance": {
+          "description": "Source chain, origin context, and creation path.",
+          "title": "Provenance",
           "type": "string"
         },
-        "preserved_invariants": {
-          "description": "List of preserved invariants.",
+        "evidence_bundle": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvidenceBundle"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Traceable support for the object claim."
+        },
+        "verification_package": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VerificationPackage"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Independent validation results."
+        },
+        "understanding_layer": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UnderstandingLayer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Human-auditable explanation of purpose."
+        },
+        "recoverability_plan": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RecoverabilityPlan"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Rollback and restoration instructions."
+        },
+        "evolution_package": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvolutionPackage"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Present if change is involved."
+        },
+        "contestation_state": {
+          "default": "uncontested",
+          "description": "Current challenge status ('uncontested' or challenge IDs).",
+          "title": "Contestation State",
+          "type": "string"
+        },
+        "trust_tier": {
+          "default": "standard",
+          "description": "Current authority class or confidence class.",
+          "title": "Trust Tier",
+          "type": "string"
+        },
+        "timestamps": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Creation, validation, activation, review, and expiry timestamps.",
+          "title": "Timestamps",
+          "type": "object"
+        },
+        "signatures": {
+          "description": "Cryptographic or attestational signatures required for authority.",
           "items": {
             "type": "string"
           },
-          "title": "Preserved Invariants",
-          "type": "array"
-        },
-        "declared_changes": {
-          "description": "Declared changes or transitions.",
-          "items": {
-            "type": "string"
-          },
-          "title": "Declared Changes",
-          "type": "array"
-        },
-        "unresolved_continuity_risks": {
-          "description": "Unresolved continuity risks.",
-          "items": {
-            "type": "string"
-          },
-          "title": "Unresolved Continuity Risks",
+          "title": "Signatures",
           "type": "array"
         }
       },
       "required": [
-        "system_identifier",
-        "canonical_state_identifier",
-        "lineage_reference"
+        "object_id",
+        "object_type",
+        "status",
+        "version",
+        "parent_reference",
+        "provenance"
       ],
-      "title": "IdentityRecord",
+      "title": "GovernanceObject",
       "type": "object"
+    },
+    "ObjectTypeEnum": {
+      "enum": [
+        "identity_record",
+        "evidence_bundle",
+        "verification_package",
+        "understanding_layer",
+        "recoverability_plan",
+        "evolution_package",
+        "state_transition",
+        "challenge_record",
+        "audit_record",
+        "authority_record"
+      ],
+      "title": "ObjectTypeEnum",
+      "type": "string"
     },
     "RecoverabilityPlan": {
       "description": "Defines containment, rollback, repair, restoration, audit requirements,\nand reauthorization criteria.",
@@ -215,6 +311,20 @@
       ],
       "title": "RecoverabilityPlan",
       "type": "object"
+    },
+    "StatusEnum": {
+      "enum": [
+        "draft",
+        "provisional",
+        "canonical",
+        "contested",
+        "contained",
+        "recovery",
+        "deprecated",
+        "revoked"
+      ],
+      "title": "StatusEnum",
+      "type": "string"
     },
     "UnderstandingLayer": {
       "description": "Contains a human-auditable summary of purpose, structure, critical path,\noperational boundaries, and major risks.",
@@ -321,88 +431,21 @@
       "type": "object"
     }
   },
-  "description": "Encapsulates a governance-relevant action along with the required\ncomplete set of artifacts as per the Enforcement Rule.",
+  "description": "Encapsulates a governance action that executes on a GovernanceObject.",
   "properties": {
     "action_type": {
-      "description": "Type of action (e.g. 'STANDARD', 'EVOLUTION')",
+      "description": "Type of action (e.g. 'DRAFT_TO_PROVISIONAL', 'PROVISIONAL_TO_CANONICAL', etc.)",
       "title": "Action Type",
       "type": "string"
     },
-    "identity_record": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/IdentityRecord"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Identity Record artifact"
-    },
-    "evidence_bundle": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/EvidenceBundle"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Evidence Bundle artifact"
-    },
-    "verification_package": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/VerificationPackage"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Verification Package artifact"
-    },
-    "understanding_layer": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/UnderstandingLayer"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Understanding Layer artifact"
-    },
-    "recoverability_plan": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/RecoverabilityPlan"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Recoverability Plan artifact"
-    },
-    "evolution_package": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/EvolutionPackage"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Evolution Package"
+    "target_object": {
+      "$ref": "#/$defs/GovernanceObject",
+      "description": "The governance object to be processed or transitioned."
     }
   },
   "required": [
-    "action_type"
+    "action_type",
+    "target_object"
   ],
   "title": "GovernanceAction",
   "type": "object"
