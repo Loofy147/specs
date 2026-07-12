@@ -1,0 +1,51 @@
+{
+  "description": "Defines canonical state, lineage, continuity claim, preserved invariants,\nand unresolved continuity risks.",
+  "properties": {
+    "system_identifier": {
+      "description": "Defines what the system is.",
+      "title": "System Identifier",
+      "type": "string"
+    },
+    "canonical_state_identifier": {
+      "description": "What version/state it is in.",
+      "title": "Canonical State Identifier",
+      "type": "string"
+    },
+    "lineage_reference": {
+      "description": "Continuous lineage reference/parent hash.",
+      "title": "Lineage Reference",
+      "type": "string"
+    },
+    "preserved_invariants": {
+      "description": "List of preserved invariants.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Preserved Invariants",
+      "type": "array"
+    },
+    "declared_changes": {
+      "description": "Declared changes or transitions.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Declared Changes",
+      "type": "array"
+    },
+    "unresolved_continuity_risks": {
+      "description": "Unresolved continuity risks.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Unresolved Continuity Risks",
+      "type": "array"
+    }
+  },
+  "required": [
+    "system_identifier",
+    "canonical_state_identifier",
+    "lineage_reference"
+  ],
+  "title": "IdentityRecord",
+  "type": "object"
+}

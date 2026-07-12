@@ -1,0 +1,55 @@
+{
+  "description": "Defines containment, rollback, repair, restoration, audit requirements,\nand reauthorization criteria.",
+  "properties": {
+    "failure_triggers": {
+      "description": "Failure/dispute triggers.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Failure Triggers",
+      "type": "array"
+    },
+    "containment_actions": {
+      "description": "Actions for containment.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Containment Actions",
+      "type": "array"
+    },
+    "rollback_mechanism": {
+      "description": "Mechanism used to rollback state.",
+      "title": "Rollback Mechanism",
+      "type": "string"
+    },
+    "recovery_steps": {
+      "description": "Steps to recover system state.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Recovery Steps",
+      "type": "array"
+    },
+    "restoration_criteria": {
+      "description": "Criteria for successful restoration.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Restoration Criteria",
+      "type": "array"
+    },
+    "audit_trail_requirements": {
+      "description": "Requirements for the audit trail.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Audit Trail Requirements",
+      "type": "array"
+    }
+  },
+  "required": [
+    "rollback_mechanism"
+  ],
+  "title": "RecoverabilityPlan",
+  "type": "object"
+}

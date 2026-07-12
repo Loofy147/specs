@@ -1,0 +1,51 @@
+{
+  "description": "Contains a human-auditable summary of purpose, structure, critical path,\noperational boundaries, and major risks.",
+  "properties": {
+    "purpose_summary": {
+      "description": "Human-auditable summary of purpose.",
+      "title": "Purpose Summary",
+      "type": "string"
+    },
+    "rule_architecture_summary": {
+      "description": "Summary of rule/architecture.",
+      "title": "Rule Architecture Summary",
+      "type": "string"
+    },
+    "critical_path_explanation": {
+      "description": "Explanation of the critical path.",
+      "title": "Critical Path Explanation",
+      "type": "string"
+    },
+    "major_risks": {
+      "description": "Major identified risks.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Major Risks",
+      "type": "array"
+    },
+    "current_uncertainties": {
+      "description": "Current uncertainties.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Current Uncertainties",
+      "type": "array"
+    },
+    "operational_boundaries": {
+      "description": "Operational boundaries or constraints.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Operational Boundaries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "purpose_summary",
+    "rule_architecture_summary",
+    "critical_path_explanation"
+  ],
+  "title": "UnderstandingLayer",
+  "type": "object"
+}

@@ -1,0 +1,53 @@
+{
+  "description": "Contains verification method, independence analysis, tests, adversarial checks,\nsemantic equivalence status, and verifier attestations.",
+  "properties": {
+    "verification_methods": {
+      "description": "Verification methods used.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Verification Methods",
+      "type": "array"
+    },
+    "independence_analysis": {
+      "description": "Analysis of the verifier's independence.",
+      "title": "Independence Analysis",
+      "type": "string"
+    },
+    "test_results": {
+      "additionalProperties": true,
+      "description": "Key-value mapping of test results.",
+      "title": "Test Results",
+      "type": "object"
+    },
+    "adversarial_results": {
+      "additionalProperties": true,
+      "description": "Key-value mapping of adversarial checks.",
+      "title": "Adversarial Results",
+      "type": "object"
+    },
+    "semantic_equivalence_status": {
+      "description": "Semantic equivalence status.",
+      "title": "Semantic Equivalence Status",
+      "type": "string"
+    },
+    "verifier_attestations": {
+      "description": "Verifier attestations or signatures.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Verifier Attestations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "verification_methods",
+    "independence_analysis",
+    "test_results",
+    "adversarial_results",
+    "semantic_equivalence_status",
+    "verifier_attestations"
+  ],
+  "title": "VerificationPackage",
+  "type": "object"
+}

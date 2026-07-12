@@ -1,0 +1,45 @@
+{
+  "description": "Contains provenance, relevance basis, supporting records, confidence level,\nlimitations, and contestation path.",
+  "properties": {
+    "claim_being_supported": {
+      "description": "The claim being supported.",
+      "title": "Claim Being Supported",
+      "type": "string"
+    },
+    "source_provenance": {
+      "description": "Source provenance of the evidence.",
+      "title": "Source Provenance",
+      "type": "string"
+    },
+    "relevance_basis": {
+      "description": "Relevance basis of the evidence to the claim.",
+      "title": "Relevance Basis",
+      "type": "string"
+    },
+    "limitations": {
+      "description": "Limitations of the evidence.",
+      "title": "Limitations",
+      "type": "string"
+    },
+    "confidence_level": {
+      "description": "Confidence level of the evidence, from 0.0 to 1.0.",
+      "title": "Confidence Level",
+      "type": "number"
+    },
+    "contestation_path": {
+      "description": "Contestation path details.",
+      "title": "Contestation Path",
+      "type": "string"
+    }
+  },
+  "required": [
+    "claim_being_supported",
+    "source_provenance",
+    "relevance_basis",
+    "limitations",
+    "confidence_level",
+    "contestation_path"
+  ],
+  "title": "EvidenceBundle",
+  "type": "object"
+}

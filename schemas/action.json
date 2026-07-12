@@ -1,0 +1,374 @@
+{
+  "$defs": {
+    "EvidenceBundle": {
+      "description": "Contains provenance, relevance basis, supporting records, confidence level,\nlimitations, and contestation path.",
+      "properties": {
+        "claim_being_supported": {
+          "description": "The claim being supported.",
+          "title": "Claim Being Supported",
+          "type": "string"
+        },
+        "source_provenance": {
+          "description": "Source provenance of the evidence.",
+          "title": "Source Provenance",
+          "type": "string"
+        },
+        "relevance_basis": {
+          "description": "Relevance basis of the evidence to the claim.",
+          "title": "Relevance Basis",
+          "type": "string"
+        },
+        "limitations": {
+          "description": "Limitations of the evidence.",
+          "title": "Limitations",
+          "type": "string"
+        },
+        "confidence_level": {
+          "description": "Confidence level of the evidence, from 0.0 to 1.0.",
+          "title": "Confidence Level",
+          "type": "number"
+        },
+        "contestation_path": {
+          "description": "Contestation path details.",
+          "title": "Contestation Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "claim_being_supported",
+        "source_provenance",
+        "relevance_basis",
+        "limitations",
+        "confidence_level",
+        "contestation_path"
+      ],
+      "title": "EvidenceBundle",
+      "type": "object"
+    },
+    "EvolutionPackage": {
+      "description": "Required for any upgrade, migration, extension, configuration shift,\nor architectural change.",
+      "properties": {
+        "continuity_proof": {
+          "description": "Proof of continuity between states.",
+          "title": "Continuity Proof",
+          "type": "string"
+        },
+        "preserved_invariants": {
+          "description": "List of preserved invariants.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Preserved Invariants",
+          "type": "array"
+        },
+        "modified_invariants": {
+          "description": "List of modified invariants.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Modified Invariants",
+          "type": "array"
+        },
+        "removed_capabilities": {
+          "description": "Capabilities removed in this version.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Removed Capabilities",
+          "type": "array"
+        },
+        "new_capabilities": {
+          "description": "Capabilities introduced in this version.",
+          "items": {
+            "type": "string"
+          },
+          "title": "New Capabilities",
+          "type": "array"
+        },
+        "second_order_impact_assessment": {
+          "description": "Assessment of second-order impacts.",
+          "title": "Second Order Impact Assessment",
+          "type": "string"
+        },
+        "recovery_and_rollback_guarantees": {
+          "description": "Guarantees for recovery/rollback.",
+          "title": "Recovery And Rollback Guarantees",
+          "type": "string"
+        },
+        "independent_attestation": {
+          "description": "Independent attestation of evolution.",
+          "title": "Independent Attestation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "continuity_proof",
+        "second_order_impact_assessment",
+        "recovery_and_rollback_guarantees",
+        "independent_attestation"
+      ],
+      "title": "EvolutionPackage",
+      "type": "object"
+    },
+    "IdentityRecord": {
+      "description": "Defines canonical state, lineage, continuity claim, preserved invariants,\nand unresolved continuity risks.",
+      "properties": {
+        "system_identifier": {
+          "description": "Defines what the system is.",
+          "title": "System Identifier",
+          "type": "string"
+        },
+        "canonical_state_identifier": {
+          "description": "What version/state it is in.",
+          "title": "Canonical State Identifier",
+          "type": "string"
+        },
+        "lineage_reference": {
+          "description": "Continuous lineage reference/parent hash.",
+          "title": "Lineage Reference",
+          "type": "string"
+        },
+        "preserved_invariants": {
+          "description": "List of preserved invariants.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Preserved Invariants",
+          "type": "array"
+        },
+        "declared_changes": {
+          "description": "Declared changes or transitions.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Declared Changes",
+          "type": "array"
+        },
+        "unresolved_continuity_risks": {
+          "description": "Unresolved continuity risks.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Unresolved Continuity Risks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "system_identifier",
+        "canonical_state_identifier",
+        "lineage_reference"
+      ],
+      "title": "IdentityRecord",
+      "type": "object"
+    },
+    "RecoverabilityPlan": {
+      "description": "Defines containment, rollback, repair, restoration, audit requirements,\nand reauthorization criteria.",
+      "properties": {
+        "failure_triggers": {
+          "description": "Failure/dispute triggers.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Failure Triggers",
+          "type": "array"
+        },
+        "containment_actions": {
+          "description": "Actions for containment.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Containment Actions",
+          "type": "array"
+        },
+        "rollback_mechanism": {
+          "description": "Mechanism used to rollback state.",
+          "title": "Rollback Mechanism",
+          "type": "string"
+        },
+        "recovery_steps": {
+          "description": "Steps to recover system state.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Recovery Steps",
+          "type": "array"
+        },
+        "restoration_criteria": {
+          "description": "Criteria for successful restoration.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Restoration Criteria",
+          "type": "array"
+        },
+        "audit_trail_requirements": {
+          "description": "Requirements for the audit trail.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Audit Trail Requirements",
+          "type": "array"
+        }
+      },
+      "required": [
+        "rollback_mechanism"
+      ],
+      "title": "RecoverabilityPlan",
+      "type": "object"
+    },
+    "UnderstandingLayer": {
+      "description": "Contains a human-auditable summary of purpose, structure, critical path,\noperational boundaries, and major risks.",
+      "properties": {
+        "purpose_summary": {
+          "description": "Human-auditable summary of purpose.",
+          "title": "Purpose Summary",
+          "type": "string"
+        },
+        "rule_architecture_summary": {
+          "description": "Summary of rule/architecture.",
+          "title": "Rule Architecture Summary",
+          "type": "string"
+        },
+        "critical_path_explanation": {
+          "description": "Explanation of the critical path.",
+          "title": "Critical Path Explanation",
+          "type": "string"
+        },
+        "major_risks": {
+          "description": "Major identified risks.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Major Risks",
+          "type": "array"
+        },
+        "current_uncertainties": {
+          "description": "Current uncertainties.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Current Uncertainties",
+          "type": "array"
+        },
+        "operational_boundaries": {
+          "description": "Operational boundaries or constraints.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Operational Boundaries",
+          "type": "array"
+        }
+      },
+      "required": [
+        "purpose_summary",
+        "rule_architecture_summary",
+        "critical_path_explanation"
+      ],
+      "title": "UnderstandingLayer",
+      "type": "object"
+    },
+    "VerificationPackage": {
+      "description": "Contains verification method, independence analysis, tests, adversarial checks,\nsemantic equivalence status, and verifier attestations.",
+      "properties": {
+        "verification_methods": {
+          "description": "Verification methods used.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Verification Methods",
+          "type": "array"
+        },
+        "independence_analysis": {
+          "description": "Analysis of the verifier's independence.",
+          "title": "Independence Analysis",
+          "type": "string"
+        },
+        "test_results": {
+          "additionalProperties": true,
+          "description": "Key-value mapping of test results.",
+          "title": "Test Results",
+          "type": "object"
+        },
+        "adversarial_results": {
+          "additionalProperties": true,
+          "description": "Key-value mapping of adversarial checks.",
+          "title": "Adversarial Results",
+          "type": "object"
+        },
+        "semantic_equivalence_status": {
+          "description": "Semantic equivalence status.",
+          "title": "Semantic Equivalence Status",
+          "type": "string"
+        },
+        "verifier_attestations": {
+          "description": "Verifier attestations or signatures.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Verifier Attestations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "verification_methods",
+        "independence_analysis",
+        "test_results",
+        "adversarial_results",
+        "semantic_equivalence_status",
+        "verifier_attestations"
+      ],
+      "title": "VerificationPackage",
+      "type": "object"
+    }
+  },
+  "description": "Encapsulates a governance-relevant action along with the required\ncomplete set of artifacts as per the Enforcement Rule.",
+  "properties": {
+    "action_type": {
+      "description": "Type of action (e.g. 'STANDARD', 'EVOLUTION')",
+      "title": "Action Type",
+      "type": "string"
+    },
+    "identity_record": {
+      "$ref": "#/$defs/IdentityRecord",
+      "description": "Identity Record artifact"
+    },
+    "evidence_bundle": {
+      "$ref": "#/$defs/EvidenceBundle",
+      "description": "Evidence Bundle artifact"
+    },
+    "verification_package": {
+      "$ref": "#/$defs/VerificationPackage",
+      "description": "Verification Package artifact"
+    },
+    "understanding_layer": {
+      "$ref": "#/$defs/UnderstandingLayer",
+      "description": "Understanding Layer artifact"
+    },
+    "recoverability_plan": {
+      "$ref": "#/$defs/RecoverabilityPlan",
+      "description": "Recoverability Plan artifact"
+    },
+    "evolution_package": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EvolutionPackage"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Evolution Package (required only for EVOLUTION actions)"
+    }
+  },
+  "required": [
+    "action_type",
+    "identity_record",
+    "evidence_bundle",
+    "verification_package",
+    "understanding_layer",
+    "recoverability_plan"
+  ],
+  "title": "GovernanceAction",
+  "type": "object"
+}
