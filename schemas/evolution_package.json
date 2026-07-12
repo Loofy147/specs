@@ -1,0 +1,65 @@
+{
+  "description": "Required for any upgrade, migration, extension, configuration shift,\nor architectural change.",
+  "properties": {
+    "continuity_proof": {
+      "description": "Proof of continuity between states.",
+      "title": "Continuity Proof",
+      "type": "string"
+    },
+    "preserved_invariants": {
+      "description": "List of preserved invariants.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Preserved Invariants",
+      "type": "array"
+    },
+    "modified_invariants": {
+      "description": "List of modified invariants.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Modified Invariants",
+      "type": "array"
+    },
+    "removed_capabilities": {
+      "description": "Capabilities removed in this version.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Removed Capabilities",
+      "type": "array"
+    },
+    "new_capabilities": {
+      "description": "Capabilities introduced in this version.",
+      "items": {
+        "type": "string"
+      },
+      "title": "New Capabilities",
+      "type": "array"
+    },
+    "second_order_impact_assessment": {
+      "description": "Assessment of second-order impacts.",
+      "title": "Second Order Impact Assessment",
+      "type": "string"
+    },
+    "recovery_and_rollback_guarantees": {
+      "description": "Guarantees for recovery/rollback.",
+      "title": "Recovery And Rollback Guarantees",
+      "type": "string"
+    },
+    "independent_attestation": {
+      "description": "Independent attestation of evolution.",
+      "title": "Independent Attestation",
+      "type": "string"
+    }
+  },
+  "required": [
+    "continuity_proof",
+    "second_order_impact_assessment",
+    "recovery_and_rollback_guarantees",
+    "independent_attestation"
+  ],
+  "title": "EvolutionPackage",
+  "type": "object"
+}

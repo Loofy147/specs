@@ -1,0 +1,84 @@
+{
+  "$defs": {
+    "StatusEnum": {
+      "enum": [
+        "draft",
+        "provisional",
+        "canonical",
+        "contested",
+        "contained",
+        "recovery",
+        "deprecated",
+        "revoked"
+      ],
+      "title": "StatusEnum",
+      "type": "string"
+    }
+  },
+  "description": "Ledger Requirement: Representing an immutable ledger trace of a status transition.",
+  "properties": {
+    "previous_status": {
+      "$ref": "#/$defs/StatusEnum",
+      "description": "Previous state status."
+    },
+    "new_status": {
+      "$ref": "#/$defs/StatusEnum",
+      "description": "New state status."
+    },
+    "reason_for_transition": {
+      "description": "Rationale/reason for the transition.",
+      "title": "Reason For Transition",
+      "type": "string"
+    },
+    "evidence_reference": {
+      "description": "Trace reference to the evidence backing transition.",
+      "title": "Evidence Reference",
+      "type": "string"
+    },
+    "verifier_reference": {
+      "description": "Verifier attestation/package reference.",
+      "title": "Verifier Reference",
+      "type": "string"
+    },
+    "contestation_reference": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Reference to contestation record if applicable.",
+      "title": "Contestation Reference"
+    },
+    "rollback_reference": {
+      "description": "Rollback path reference.",
+      "title": "Rollback Reference",
+      "type": "string"
+    },
+    "timestamp": {
+      "description": "ISO UTC timestamp of the ledger record.",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "signer_identity": {
+      "description": "Identity of the authority signing the transition.",
+      "title": "Signer Identity",
+      "type": "string"
+    }
+  },
+  "required": [
+    "previous_status",
+    "new_status",
+    "reason_for_transition",
+    "evidence_reference",
+    "verifier_reference",
+    "rollback_reference",
+    "timestamp",
+    "signer_identity"
+  ],
+  "title": "LedgerEntry",
+  "type": "object"
+}
