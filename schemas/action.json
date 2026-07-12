@@ -329,23 +329,63 @@
       "type": "string"
     },
     "identity_record": {
-      "$ref": "#/$defs/IdentityRecord",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/IdentityRecord"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
       "description": "Identity Record artifact"
     },
     "evidence_bundle": {
-      "$ref": "#/$defs/EvidenceBundle",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EvidenceBundle"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
       "description": "Evidence Bundle artifact"
     },
     "verification_package": {
-      "$ref": "#/$defs/VerificationPackage",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VerificationPackage"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
       "description": "Verification Package artifact"
     },
     "understanding_layer": {
-      "$ref": "#/$defs/UnderstandingLayer",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/UnderstandingLayer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
       "description": "Understanding Layer artifact"
     },
     "recoverability_plan": {
-      "$ref": "#/$defs/RecoverabilityPlan",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RecoverabilityPlan"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
       "description": "Recoverability Plan artifact"
     },
     "evolution_package": {
@@ -358,16 +398,11 @@
         }
       ],
       "default": null,
-      "description": "Evolution Package (required only for EVOLUTION actions)"
+      "description": "Evolution Package"
     }
   },
   "required": [
-    "action_type",
-    "identity_record",
-    "evidence_bundle",
-    "verification_package",
-    "understanding_layer",
-    "recoverability_plan"
+    "action_type"
   ],
   "title": "GovernanceAction",
   "type": "object"

@@ -216,6 +216,18 @@
       "title": "RecoverabilityPlan",
       "type": "object"
     },
+    "SystemStateEnum": {
+      "enum": [
+        "DRAFT",
+        "PROVISIONAL",
+        "CANONICAL",
+        "CONTESTED",
+        "CONTAINED",
+        "RECOVERY"
+      ],
+      "title": "SystemStateEnum",
+      "type": "string"
+    },
     "UnderstandingLayer": {
       "description": "Contains a human-auditable summary of purpose, structure, critical path,\noperational boundaries, and major risks.",
       "properties": {
@@ -321,10 +333,23 @@
       "type": "object"
     }
   },
-  "description": "Defines the canonical state of the system, including its identity record,\nassociated active artifacts, and metadata.",
+  "description": "Defines the canonical state of the system, including its identity record,\nassociated active artifacts, runtime state, and metadata.",
   "properties": {
+    "runtime_state": {
+      "$ref": "#/$defs/SystemStateEnum",
+      "default": "DRAFT",
+      "description": "Current runtime state of the system state machine."
+    },
     "identity_record": {
-      "$ref": "#/$defs/IdentityRecord",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/IdentityRecord"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
       "description": "The current Identity Record of the system state."
     },
     "last_evidence_bundle": {
@@ -385,7 +410,7 @@
         }
       ],
       "default": null,
-      "description": "Last evolution package processed if latest was evolution."
+      "description": "Last evolution package processed."
     },
     "active_protocols": {
       "description": "Currently active protocols.",
@@ -414,7 +439,7 @@
       "type": "boolean"
     },
     "history": {
-      "description": "Audit log of state transitions.",
+      "description": "Audit log of state transitions and events.",
       "items": {
         "additionalProperties": true,
         "type": "object"
@@ -423,9 +448,6 @@
       "type": "array"
     }
   },
-  "required": [
-    "identity_record"
-  ],
   "title": "SystemState",
   "type": "object"
 }

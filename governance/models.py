@@ -1,5 +1,15 @@
 from typing import List, Optional, Dict, Any
+from enum import Enum
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+class SystemStateEnum(str, Enum):
+    DRAFT = "DRAFT"
+    PROVISIONAL = "PROVISIONAL"
+    CANONICAL = "CANONICAL"
+    CONTESTED = "CONTESTED"
+    CONTAINED = "CONTAINED"
+    RECOVERY = "RECOVERY"
+
 
 class IdentityRecord(BaseModel):
     """
@@ -136,41 +146,83 @@ class GovernanceAction(BaseModel):
     complete set of artifacts as per the Enforcement Rule.
     """
     action_type: str = Field(..., description="Type of action (e.g. 'STANDARD', 'EVOLUTION')")
-    identity_record: IdentityRecord = Field(..., description="Identity Record artifact")
-    evidence_bundle: EvidenceBundle = Field(..., description="Evidence Bundle artifact")
-    verification_package: VerificationPackage = Field(..., description="Verification Package artifact")
-    understanding_layer: UnderstandingLayer = Field(..., description="Understanding Layer artifact")
-    recoverability_plan: RecoverabilityPlan = Field(..., description="Recoverability Plan artifact")
-    evolution_package: Optional[EvolutionPackage] = Field(None, description="Evolution Package (required only for EVOLUTION actions)")
+    identity_record: Optional[IdentityRecord] = Field(None, description="Identity Record artifact")
+    evidence_bundle: Optional[EvidenceBundle] = Field(None, description="Evidence Bundle artifact")
+    verification_package: Optional[VerificationPackage] = Field(None, description="Verification Package artifact")
+    understanding_layer: Optional[UnderstandingLayer] = Field(None, description="Understanding Layer artifact")
+    recoverability_plan: Optional[RecoverabilityPlan] = Field(None, description="Recoverability Plan artifact")
+    evolution_package: Optional[EvolutionPackage] = Field(None, description="Evolution Package")
 
     @field_validator("action_type")
     @classmethod
     def validate_action_type(cls, v: str) -> str:
         v_upper = v.strip().upper()
-        if v_upper not in ("STANDARD", "EVOLUTION"):
-            raise ValueError("action_type must be either 'STANDARD' or 'EVOLUTION'.")
+        if v_upper not in ("STANDARD", "EVOLUTION", "PROPOSAL", "TRANSITION", "CONTESTATION", "DRIFT", "EMERGENCY", "RECOVERY"):
+            raise ValueError(f"Invalid action_type: {v_upper}")
         return v_upper
 
     @model_validator(mode="after")
-    def validate_enforcement_rule(self) -> "GovernanceAction":
-        if self.action_type == "EVOLUTION" and self.evolution_package is None:
-            raise ValueError("Evolution Package is required for EVOLUTION actions (Enforcement Rule).")
+    def validate_dependency_order_and_enforcement(self) -> "GovernanceAction":
+        # Check artifact dependency order (Dependency rule: cannot have higher without lower)
+        # 1. Identity, 2. Evidence, 3. Verification, 4. Understanding, 5. Recoverability, 6. Evolution
+        has_id = self.identity_record is not None
+        has_ev = self.evidence_bundle is not None
+        has_vp = self.verification_package is not None
+        has_ul = self.understanding_layer is not None
+        has_rp = self.recoverability_plan is not None
+        has_ep = self.evolution_package is not None
+
+        # Check in order: if we have N, we must have all N-1
+        if has_ep and not has_rp:
+            raise ValueError("Artifact dependency order violated: Evolution Package requires Recoverability Plan.")
+        if has_rp and not has_ul:
+            raise ValueError("Artifact dependency order violated: Recoverability Plan requires Understanding Layer.")
+        if has_ul and not has_vp:
+            raise ValueError("Artifact dependency order violated: Understanding Layer requires Verification Package.")
+        if has_vp and not has_ev:
+            raise ValueError("Artifact dependency order violated: Verification Package requires Evidence Bundle.")
+        if has_ev and not has_id:
+            raise ValueError("Artifact dependency order violated: Evidence Bundle requires Identity Record.")
+
+        # Enforcement Rule: Standard action requires 1-5, Evolution requires 1-6
+        if self.action_type in ("STANDARD", "EVOLUTION"):
+            if not (has_id and has_ev and has_vp and has_ul and has_rp):
+                raise ValueError(f"{self.action_type} action is non-canonical: incomplete minimal artifact set.")
+            if self.action_type == "EVOLUTION" and not has_ep:
+                raise ValueError("EVOLUTION action is non-canonical: missing Evolution Package.")
+
         return self
 
 
 class SystemState(BaseModel):
     """
     Defines the canonical state of the system, including its identity record,
-    associated active artifacts, and metadata.
+    associated active artifacts, runtime state, and metadata.
     """
-    identity_record: IdentityRecord = Field(..., description="The current Identity Record of the system state.")
+    runtime_state: SystemStateEnum = Field(SystemStateEnum.DRAFT, description="Current runtime state of the system state machine.")
+    identity_record: Optional[IdentityRecord] = Field(None, description="The current Identity Record of the system state.")
     last_evidence_bundle: Optional[EvidenceBundle] = Field(None, description="Last evidence bundle processed.")
     last_verification_package: Optional[VerificationPackage] = Field(None, description="Last verification package processed.")
     last_understanding_layer: Optional[UnderstandingLayer] = Field(None, description="Last understanding layer processed.")
     last_recoverability_plan: Optional[RecoverabilityPlan] = Field(None, description="Last recoverability plan processed.")
-    last_evolution_package: Optional[EvolutionPackage] = Field(None, description="Last evolution package processed if latest was evolution.")
+    last_evolution_package: Optional[EvolutionPackage] = Field(None, description="Last evolution package processed.")
     active_protocols: List[str] = Field(default_factory=list, description="Currently active protocols.")
     drift_metrics: Dict[str, Any] = Field(default_factory=dict, description="Metrics tracking potential system or verification drift.")
     trust_level: str = Field("HIGH", description="Current trust level of the system ('HIGH', 'DOWNGRADED').")
     is_emergency: bool = Field(False, description="Whether the system is currently in emergency/containment mode.")
-    history: List[Dict[str, Any]] = Field(default_factory=list, description="Audit log of state transitions.")
+    history: List[Dict[str, Any]] = Field(default_factory=list, description="Audit log of state transitions and events.")
+
+    @property
+    def is_canonical(self) -> bool:
+        """Minimal Canonical Predicate"""
+        has_all_required = (
+            self.identity_record is not None and
+            self.last_evidence_bundle is not None and
+            self.last_verification_package is not None and
+            self.last_understanding_layer is not None and
+            self.last_recoverability_plan is not None
+        )
+        if self.last_evolution_package is not None:
+            # For changes, must include evolution package
+            return has_all_required
+        return has_all_required
