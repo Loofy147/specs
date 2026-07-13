@@ -1,0 +1,16 @@
+\documentclass{article}
+\begin{document}
+\section{Governance Constitution Math Specification}
+
+% Core Invariants
+\begin{itemize}
+    \item Canonical: $Canonical(o) \equiv I(o) \wedge E(o) \wedge V(o) \wedge U(o) \wedge R_c(o)$
+    \item CanonicalChange: $CanonicalChange(o) \equiv Canonical(o) \wedge X(o)$
+\end{itemize}
+
+% Verification layer
+\begin{itemize}
+    \item Verified: $Verified(q) \equiv Prov(q) \wedge Evid(q) \wedge Indep(q) \wedge SemEq(q) \wedge Adv(q) \wedge RuleCompat(q)$
+\end{itemize}
+
+\end{document}

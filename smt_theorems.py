@@ -241,6 +241,19 @@ report("Recovery Path Guaranteed: CONTAINED -> RECOVERY -> CANONICAL  [Int]", re
 # 7) Witnessed Comprehensibility for Understandable as a Structural Proof.
 #    Proves that any document meeting the structural requirements of minimum
 #    word count and evidence pointers meets the Understandable obligation.
+#
+#    PROOFS & PROXY BOUNDARY WARNING:
+#    It is critical to document the mathematical and semantic proof boundary
+#    around the Understandable predicate. Unlike cryptographic proofs of identity,
+#    authenticity, or integrity (such as Ed25519 signatures or SHA-256 hash chains
+#    which provide definitive mathematical verification), cognitive understanding is
+#    inherently non-cryptographic and cannot be directly proved.
+#
+#    Thus, this theorem verifies a STRUCTURAL PROXY (Witnessed Comprehensibility) rather
+#    than cognitive/semantic comprehension itself. We prove that a document complies
+#    with structural rules (e.g. word count, evidence references, risk disclosures),
+#    leaving the validation of actual semantic coherence as an intentional, visible boundary
+#    where human audit and formal structure meet.
 # ---------------------------------------------------------------------------
 
 hr("7) Witnessed Comprehensibility for Understandable (structural proof)")

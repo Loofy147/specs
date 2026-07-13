@@ -218,16 +218,31 @@ assert evid_ok_bad is False and verified_bad is False
 
 # ---------------------------------------------------------------------------
 # 5) A real (if lighter-weight) derivation for Understandable and Recoverable
+#
+#    PROOFS & PROXY BOUNDARY WARNING:
+#    The Understandable predicate marks a crucial proof boundary in our system.
+#    Unlike cryptographic invariants (which mathematically guarantee identity, lineage,
+#    and integrity via cryptography, hash-chains, and signatures), human/cognitive
+#    comprehension cannot be verified cryptographically.
+#    Therefore, the system relies on a structural proxy (e.g., word count thresholds,
+#    presence of evidence references, risk disclosures) rather than verifying actual
+#    cognitive/semantic understanding. This distinction is preserved and made visible
+#    to maintain audit-trail transparency and prevent false claims of cryptographic
+#    verification where only structural completeness is guaranteed.
 # ---------------------------------------------------------------------------
 
 hr("5) Understandable / Recoverable -- honest partial derivations")
 
 print(
+    "========================= PROOF BOUNDARY WARNING =========================\n"
     "Identity/Prov/Evid/Indep/SemEq/Adv/RuleCompat reduce to a proof: a signature\n"
     "either verifies or it doesn't, a hash either matches or it doesn't. Understanding\n"
     "is a different kind of predicate -- there's no signature that proves a human (or a\n"
     "model) actually understood something. What CAN be made real is a structural proxy:\n"
-    "documentation completeness, not comprehension."
+    "documentation completeness, not comprehension. This distinction marks an intentional\n"
+    "non-cryptographic boundary where structural compliance serves as a proxy for cognitive\n"
+    "coherence, maintaining clear audit transparency.\n"
+    "=========================================================================="
 )
 
 def understandable_valid(rationale: str, evidence_refs: list, min_words: int = 8):

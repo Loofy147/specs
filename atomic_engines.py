@@ -136,6 +136,14 @@ def adv_valid(candidate: Callable[..., object], cases: List[dict]) -> Tuple[bool
 # ---------------------------------------------------------------------------
 
 def active_constitution_hash(tex_path: str = "/mnt/user-data/uploads/governance_math.tex") -> str:
+    paths_to_try = [tex_path, "governance_math.tex", "specs"]
+    for path in paths_to_try:
+        try:
+            with open(path, "rb") as f:
+                return hashlib.sha256(f.read()).hexdigest()
+        except OSError:
+            continue
+    # Fallback to direct read which will raise the original OSError (e.g. FileNotFoundError)
     with open(tex_path, "rb") as f:
         return hashlib.sha256(f.read()).hexdigest()
 
