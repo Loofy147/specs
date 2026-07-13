@@ -1,6 +1,7 @@
 import datetime
 from pydantic import ValidationError
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple, Callable
+from dataclasses import dataclass, field
 from governance.models import (
     SystemState, StatusEnum, ObjectTypeEnum, GovernanceObject, LedgerEntry,
     GovernanceAction, EvidenceBundle, VerificationPackage, UnderstandingLayer, RecoverabilityPlan, EvolutionPackage
@@ -17,6 +18,139 @@ class InvariantViolationError(GovernanceError):
 class ProtocolViolationError(GovernanceError):
     """Raised when a governing protocol rule is violated."""
     pass
+
+
+@dataclass
+class TransitionRule:
+    source_states: Tuple[StatusEnum, ...]
+    target_state: StatusEnum
+    trigger: str
+    required_predicates: List[Callable[[GovernanceObject], bool]] = field(default_factory=list)
+    predicate_descriptions: List[str] = field(default_factory=list)
+    forbidden_conditions: List[Callable[[GovernanceObject], bool]] = field(default_factory=list)
+    forbidden_descriptions: List[str] = field(default_factory=list)
+    ledger_effect: List[str] = field(default_factory=list)
+    rollback_path: str = "none"
+
+
+TRANSITION_TABLE: List[TransitionRule] = [
+    TransitionRule(
+        source_states=(StatusEnum.DRAFT,),
+        target_state=StatusEnum.PROVISIONAL,
+        trigger="Minimal staging of evidence-backed proposal",
+        required_predicates=[
+            lambda o: bool(o.provenance),
+            lambda o: o.evidence_bundle is not None,
+            lambda o: o.understanding_layer is not None and bool(o.understanding_layer.operational_boundaries)
+        ],
+        predicate_descriptions=[
+            "minimal provenance.",
+            "initial evidence.",
+            "initial scope declaration."
+        ],
+        ledger_effect=["previous_status", "new_status", "reason_for_transition", "evidence_reference"],
+        rollback_path="Discard draft proposal"
+    ),
+    TransitionRule(
+        source_states=(StatusEnum.PROVISIONAL,),
+        target_state=StatusEnum.CANONICAL,
+        trigger="Complete verification and independent review signoff",
+        required_predicates=[
+            lambda o: (o.evidence_bundle is not None and o.verification_package is not None and
+                       o.understanding_layer is not None and o.recoverability_plan is not None),
+            lambda o: bool(o.signatures),
+            lambda o: o.verification_package is not None and o.verification_package.semantic_equivalence_status == "IDENTICAL"
+        ],
+        predicate_descriptions=[
+            "all 4 standard artifacts.",
+            "explicit activation signatures.",
+            "semantic equivalence validation."
+        ],
+        forbidden_conditions=[
+            lambda o: o.contestation_state != "uncontested"
+        ],
+        forbidden_descriptions=[
+            "Cannot transition if the object is actively contested."
+        ],
+        ledger_effect=["previous_status", "new_status", "reason_for_transition", "evidence_reference", "verifier_reference", "rollback_reference"],
+        rollback_path="Standard rollback defined in RecoverabilityPlan"
+    ),
+    TransitionRule(
+        source_states=(StatusEnum.CANONICAL,),
+        target_state=StatusEnum.CONTESTED,
+        trigger="Valid challenge registration against canonical state",
+        required_predicates=[
+            lambda o: o.contestation_state != "uncontested"
+        ],
+        predicate_descriptions=[
+            "active contestation state registration."
+        ],
+        ledger_effect=["previous_status", "new_status", "reason_for_transition", "contestation_reference"],
+        rollback_path="Provisional containment or dispute resolution"
+    ),
+    TransitionRule(
+        source_states=(StatusEnum.CANONICAL, StatusEnum.PROVISIONAL),
+        target_state=StatusEnum.CONTAINED,
+        trigger="System drift, verification mismatch, or compromise detected",
+        required_predicates=[],
+        ledger_effect=["previous_status", "new_status", "reason_for_transition"],
+        rollback_path="Activation of ContainmentActions"
+    ),
+    TransitionRule(
+        source_states=(StatusEnum.CONTAINED,),
+        target_state=StatusEnum.RECOVERY,
+        trigger="Containment acknowledgment and audit repair kickoff",
+        required_predicates=[
+            lambda o: o.recoverability_plan is not None and bool(o.recoverability_plan.recovery_steps)
+        ],
+        predicate_descriptions=[
+            "restoration plan and recovery steps."
+        ],
+        ledger_effect=["previous_status", "new_status", "reason_for_transition", "rollback_reference"],
+        rollback_path="Rollback tool repair path"
+    ),
+    TransitionRule(
+        source_states=(StatusEnum.RECOVERY,),
+        target_state=StatusEnum.CANONICAL,
+        trigger="Successful repair validation and independent reauthorization",
+        required_predicates=[
+            lambda o: o.verification_package is not None and o.evolution_package is not None,
+            lambda o: bool(o.signatures)
+        ],
+        predicate_descriptions=[
+            "validation package and evolution proof.",
+            "independent reauthorization signatures."
+        ],
+        ledger_effect=["previous_status", "new_status", "reason_for_transition", "verifier_reference"],
+        rollback_path="Full system rollback"
+    ),
+    TransitionRule(
+        source_states=(StatusEnum.CANONICAL,),
+        target_state=StatusEnum.DEPRECATED,
+        trigger="Retirement of component after reassessment",
+        required_predicates=[
+            lambda o: "deprecated" in o.timestamps
+        ],
+        predicate_descriptions=[
+            "deprecated timestamp in object's timestamps."
+        ],
+        ledger_effect=["previous_status", "new_status", "reason_for_transition"],
+        rollback_path="None (terminal or replacement path)"
+    ),
+    TransitionRule(
+        source_states=(StatusEnum.CANONICAL,),
+        target_state=StatusEnum.REVOKED,
+        trigger="Decisive invalidation due to compromise",
+        required_predicates=[
+            lambda o: "revoked" in o.timestamps
+        ],
+        predicate_descriptions=[
+            "revoked timestamp in object's timestamps."
+        ],
+        ledger_effect=["previous_status", "new_status", "reason_for_transition"],
+        rollback_path="Immediate successor state transition"
+    )
+]
 
 
 class GovernanceStateMachine:
@@ -81,7 +215,7 @@ class GovernanceStateMachine:
 
     def transition_to(self, target_status: StatusEnum, reason: str, action_obj: Optional[GovernanceObject] = None, signer_identity: str = "authority-01") -> SystemState:
         """
-        Enforces Section 3: Transition Contract conditions, Integrity Predicates,
+        Enforces Section 3: Transition Table rules, Integrity Predicates,
         Invariants, and appends a corresponding Section 9 LedgerEntry.
         """
         current_obj = self.state.current_object
@@ -95,13 +229,19 @@ class GovernanceStateMachine:
         new_obj_data["status"] = target_status
         if action_obj:
             # Merge fields from action_obj to update artifacts or metadata
-            for field, val in action_obj.model_dump(exclude_unset=True).items():
+            for field_name, val in action_obj.model_dump(exclude_unset=True).items():
                 if val is not None:
-                    new_obj_data[field] = val
+                    new_obj_data[field_name] = val
 
         # Ensure version increments for state updates/transitions
         new_obj_data["version"] = current_obj.version + 1
         new_obj_data["parent_reference"] = current_obj.object_id
+
+        # Before instantiating, set deprecated/revoked timestamps if transitioning to those states
+        if target_status == StatusEnum.DEPRECATED and "deprecated" not in new_obj_data.get("timestamps", {}):
+            new_obj_data.setdefault("timestamps", {})["deprecated"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        elif target_status == StatusEnum.REVOKED and "revoked" not in new_obj_data.get("timestamps", {}):
+            new_obj_data.setdefault("timestamps", {})["revoked"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
         # Instantiate target object and validate schema/dependency rules
         try:
@@ -109,60 +249,25 @@ class GovernanceStateMachine:
         except ValidationError as e:
             raise ProtocolViolationError(f"Validation Error during transition instantiation: {e}")
 
-        # Enforce transition rules
-        if current_status == StatusEnum.DRAFT and target_status == StatusEnum.PROVISIONAL:
-            # Requires: minimal provenance, initial evidence, initial scope declaration
-            if not target_obj.provenance:
-                raise ProtocolViolationError("Draft -> Provisional requires minimal provenance.")
-            if not target_obj.evidence_bundle:
-                raise ProtocolViolationError("Draft -> Provisional requires initial evidence.")
-            if not target_obj.understanding_layer or not target_obj.understanding_layer.operational_boundaries:
-                raise ProtocolViolationError("Draft -> Provisional requires initial scope declaration.")
+        # Find matching transition rule in Transition Table
+        rule = None
+        for r in TRANSITION_TABLE:
+            if current_status in r.source_states and r.target_state == target_status:
+                rule = r
+                break
 
-        elif current_status == StatusEnum.PROVISIONAL and target_status == StatusEnum.CANONICAL:
-            # Requires: complete required artifacts, independent validation, semantic equivalence verification,
-            # no unresolved critical risks, explicit activation signature
-            if not (target_obj.evidence_bundle and target_obj.verification_package and
-                    target_obj.understanding_layer and target_obj.recoverability_plan):
-                raise ProtocolViolationError("Provisional -> Canonical requires all 4 standard artifacts.")
-            if not target_obj.signatures:
-                raise ProtocolViolationError("Provisional -> Canonical requires explicit activation signatures.")
-            if target_obj.verification_package.semantic_equivalence_status != "IDENTICAL":
-                raise ProtocolViolationError("Provisional -> Canonical requires semantic equivalence validation.")
-
-        elif current_status == StatusEnum.CANONICAL and target_status == StatusEnum.CONTESTED:
-            # Requires: valid challenge submission, evidence basis, contestation registration, ledger entry
-            if target_obj.contestation_state == "uncontested":
-                raise ProtocolViolationError("Canonical -> Contested requires active contestation state registration.")
-
-        elif (current_status in (StatusEnum.CANONICAL, StatusEnum.PROVISIONAL)) and target_status == StatusEnum.CONTAINED:
-            # Requires: containment conditions (drift, mismatch, verifier compromise, etc.)
-            pass
-
-        elif current_status == StatusEnum.CONTAINED and target_status == StatusEnum.RECOVERY:
-            # Requires: containment acknowledgment, restoration plan, bounded recovery scope, repair path
-            if not target_obj.recoverability_plan or not target_obj.recoverability_plan.recovery_steps:
-                raise ProtocolViolationError("Contained -> Recovery requires restoration plan and recovery steps.")
-
-        elif current_status == StatusEnum.RECOVERY and target_status == StatusEnum.CANONICAL:
-            # Requires: successful repair validation, integrity proof, rollback readiness, independent reauthorization
-            if not target_obj.verification_package or not target_obj.evolution_package:
-                raise ProtocolViolationError("Recovery -> Canonical requires validation package and evolution proof.")
-            if not target_obj.signatures:
-                raise ProtocolViolationError("Recovery -> Canonical requires independent reauthorization signatures.")
-
-        elif current_status == StatusEnum.CANONICAL and target_status == StatusEnum.DEPRECATED:
-            # Requires: reassessment outcome, replacement path, no active unresolved critical dependence
-            if "deprecated" not in target_obj.timestamps:
-                target_obj.timestamps["deprecated"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-
-        elif current_status == StatusEnum.CANONICAL and target_status == StatusEnum.REVOKED:
-            # Requires: decisive invalidation, immediate containment, successor state path
-            if "revoked" not in target_obj.timestamps:
-                target_obj.timestamps["revoked"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-
-        else:
+        if not rule:
             raise ProtocolViolationError(f"Direct transition from {current_status} to {target_status} is invalid under Transition Contract.")
+
+        # Evaluate required predicates
+        for pred, desc in zip(rule.required_predicates, rule.predicate_descriptions):
+            if not pred(target_obj):
+                raise ProtocolViolationError(f"{current_status.value.capitalize()} -> {target_status.value.capitalize()} requires {desc}")
+
+        # Evaluate forbidden conditions
+        for cond, desc in zip(rule.forbidden_conditions, rule.forbidden_descriptions):
+            if cond(target_obj):
+                raise ProtocolViolationError(f"Transition block: {desc}")
 
         # Ensure transition preserves invariants
         self._preserve_invariants(current_obj, target_obj)
