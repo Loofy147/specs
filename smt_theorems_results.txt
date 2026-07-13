@@ -24,9 +24,30 @@
            UNSAT on the negation -> no assignment anywhere in the domain violates it. Proven.
 
 ========================================================================
+5) Inductive Invariant for Ledger Version Monotonicity (unbounded history)
+========================================================================
+[THEOREM]  Inductive Step: P(S) ^ T(S, S_next) => P(S_next)  [Array, unbounded history]
+           UNSAT on the negation -> no assignment anywhere in the domain violates it. Proven.
+
+========================================================================
+6) Recovery Proof as a State-Machine Invariant
+========================================================================
+[THEOREM]  Recovery Path Guaranteed: CONTAINED -> RECOVERY -> CANONICAL  [Int]
+           UNSAT on the negation -> no assignment anywhere in the domain violates it. Proven.
+
+========================================================================
+7) Witnessed Comprehensibility for Understandable (structural proof)
+========================================================================
+[THEOREM]  Witnessed Comprehensibility: Structurally compliant docs are Understandable
+           UNSAT on the negation -> no assignment anywhere in the domain violates it. Proven.
+
+========================================================================
 Summary
 ========================================================================
 1) Cross-check vs. exhaustive result : MATCH (both proved it)
 2) Alignment composition (real)      : PROVEN
 3) Tightened bound (expected false)  : correctly REFUTED with a witness
 4) Trust-decay clamp monotonicity    : PROVEN
+5) Ledger version monotonicity       : PROVEN
+6) Recovery path guaranteed          : PROVEN
+7) Witnessed comprehensibility       : PROVEN
