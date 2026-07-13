@@ -245,20 +245,24 @@ print(
     "=========================================================================="
 )
 
-def understandable_valid(rationale: str, evidence_refs: list, min_words: int = 8):
-    word_count = len(rationale.split())
-    has_words = word_count >= min_words
-    has_evidence_pointer = len(evidence_refs) > 0
-    ok = has_words and has_evidence_pointer
-    return ok, (f"rationale={word_count} words (>= {min_words}), {len(evidence_refs)} evidence ref(s)" if ok
-                else f"rationale={word_count} words (< {min_words} required) or missing evidence refs -- structurally under-documented")
+purpose_summary = "Sets the daily withdrawal limit invariant based on the July backtest to protect against liquidity runs."
+dependency_path = ["kernel.py", "atomic_engines.py"]
+critical_path_explanation = "The critical path enforces checking absolute drawdown bounds before completing transition or transaction states."
+reviewer_signature = "verifier-alice-attestation-01"
+checklist = {
+    "purpose_clear": True,
+    "architecture_aligned": True,
+    "risks_disclosed": True
+}
 
-u_ok, u_reason = understandable_valid(
-    "Sets the daily withdrawal limit invariant based on the July backtest; "
-    "trips containment if realized drawdown exceeds the modeled 4.2% by more than 2x.",
-    evidence_refs=["backtest_results.csv"],
+u_ok, u_reason = AE.understanding_witness_valid(
+    purpose_summary=purpose_summary,
+    dependency_path=dependency_path,
+    critical_path_explanation=critical_path_explanation,
+    reviewer_signature=reviewer_signature,
+    checklist=checklist
 )
-print(f"  Understandable (proxy): {u_ok} -- {u_reason}")
+print(f"  Understandable (witness): {u_ok} -- {u_reason}")
 
 def recoverable_valid(ledger: K.Ledger, object_id: str) -> tuple:
     prior_canonical_snapshots = [e for e in ledger.entries() if e.object_id == object_id and e.status_after == "active"]

@@ -153,3 +153,34 @@ def rule_compat_valid(declared_hash: str, tex_path: str = "/mnt/user-data/upload
     ok = declared_hash == active
     return ok, (f"matches active constitution ({active[:12]}...)" if ok
                 else f"declared {declared_hash[:12]}... != active {active[:12]}... -- implementation targets a stale/different constitution")
+
+
+def understanding_witness_valid(
+    purpose_summary: str,
+    dependency_path: List[str],
+    critical_path_explanation: str,
+    reviewer_signature: str,
+    checklist: Dict[str, bool],
+) -> Tuple[bool, str]:
+    """
+    Validates a structural witness proving human-auditable comprehension.
+    Keep it explicit that this is not a cryptographic proof, but a structurally
+    auditable comprehension record.
+    """
+    if not purpose_summary or len(purpose_summary.split()) < 8:
+         return False, "Comprehension Record Fail: Purpose summary too short (minimum 8 words)."
+    if not dependency_path:
+         return False, "Comprehension Record Fail: Dependency path cannot be empty."
+    if not critical_path_explanation or len(critical_path_explanation.split()) < 12:
+         return False, "Comprehension Record Fail: Critical path explanation too short (minimum 12 words)."
+    if not reviewer_signature:
+         return False, "Comprehension Record Fail: Reviewer signature is missing."
+    if not checklist or not any(checklist.values()):
+         return False, "Comprehension Record Fail: Bounded checklist must be present and verified."
+
+    # Success
+    detail = (
+         f"Comprehension record structurally valid. Auditable record signed by {reviewer_signature} "
+         f"with {len(checklist)} checked items. WARNING: This is a structural proxy, NOT a cryptographic proof."
+    )
+    return True, detail
