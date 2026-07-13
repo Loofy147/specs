@@ -1,0 +1,32 @@
+
+========================================================================
+1) Cross-check against proof_harness.py's exhaustive result (independent method)
+========================================================================
+[THEOREM]  CanonicalChange(o) => Canonical(o)  [Bool, 6 vars]
+           UNSAT on the negation -> no assignment anywhere in the domain violates it. Proven.
+
+========================================================================
+2) Metric alignment composition (real-valued, infinite domain)
+========================================================================
+[THEOREM]  Aligned(m1)^Aligned(m2) => Aligned(mean(m1,m2))  [Real, unbounded domain]
+           UNSAT on the negation -> no assignment anywhere in the domain violates it. Proven.
+
+========================================================================
+3) Deliberately false claim, to confirm Z3 can actually refute (not just confirm)
+========================================================================
+[REFUTED]  Aligned(m1)^Aligned(m2) => Aligned_eps/2(mean(m1,m2))  [claim we expect to be FALSE]
+           SAT -- a genuine counterexample exists. counterexample: score1=0, score2=0, omega=2, eps=2
+
+========================================================================
+4) Trust-decay clamp monotonicity (real-valued, unbounded domain)
+========================================================================
+[THEOREM]  delta1 <= delta2  =>  clamp(trust_before+delta1) <= clamp(trust_before+delta2)  [Real]
+           UNSAT on the negation -> no assignment anywhere in the domain violates it. Proven.
+
+========================================================================
+Summary
+========================================================================
+1) Cross-check vs. exhaustive result : MATCH (both proved it)
+2) Alignment composition (real)      : PROVEN
+3) Tightened bound (expected false)  : correctly REFUTED with a witness
+4) Trust-decay clamp monotonicity    : PROVEN

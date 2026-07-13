@@ -1,0 +1,84 @@
+
+========================================================================
+0) Real PKI setup (genuine Ed25519 keys, not mocked)
+========================================================================
+root fingerprint:     3216c961654996eb
+genesis key (in cert): dd9c575cec8e151a
+current key:            b755759dad5a6b28
+rotation hops:           2
+lineage entries:          4
+
+========================================================================
+1) IdentityValid := VerifyCertificate ^ CheckContinuity ^ VerifyLineage
+========================================================================
+  VerifyCertificate   : root signature valid, certificate current
+  CheckContinuity     : continuity verified across 2 signed hop(s)
+  VerifyLineage       : lineage verified across 4 entries
+IdentityValid = True
+
+========================================================================
+2) Verified(q) sub-predicates, each derived from real evidence
+========================================================================
+  Prov         : True  -- provenance signature verifies under author's key
+  Evid         : True  -- evidence matches commitment (8780ab8ec32b...)
+  Indep        : True  -- two distinct authorized non-author verifiers (c9b31eb059d4237a, ff7d2d412488b57b)
+  SemEq        : True  -- exhaustively equivalent across all 8 assignments
+  Adv          : True  -- survived all 4 adversarial cases
+  RuleCompat   : True  -- matches active constitution (e71d63fb9a37...)
+
+========================================================================
+3) Feed derived checks into the untouched kernel.py composite layer
+========================================================================
+Canonical(o)       = True
+CanonicalChange(o) = True
+Every input above came from a signature, a hash, or an exhaustive check -- none were supplied as bare booleans.
+
+========================================================================
+4) Tamper scenario A: forge the certificate signature
+========================================================================
+  VerifyCertificate   : root signature invalid (forged or corrupted certificate)
+  CheckContinuity     : continuity verified across 2 signed hop(s)
+  VerifyLineage       : lineage verified across 4 entries
+IdentityValid = False  (expected False)
+Canonical(o) after forged cert = False  (expected False)
+
+========================================================================
+4) Tamper scenario B: hijacked key rotation (hop 1 not actually signed by the prior key)
+========================================================================
+  VerifyCertificate   : root signature valid, certificate current
+  CheckContinuity     : hop 0: chain link broken -- prior key in this record doesn't match the previous hop's new key
+  VerifyLineage       : lineage verified across 4 entries
+IdentityValid = False  (expected False)
+Canonical(o) after hijacked rotation = False  (expected False)
+
+========================================================================
+4) Tamper scenario C: lineage entry altered after the fact
+========================================================================
+  VerifyCertificate   : root signature valid, certificate current
+  CheckContinuity     : continuity verified across 2 signed hop(s)
+  VerifyLineage       : entry 1: hash mismatch -- record tampered after the fact
+IdentityValid = False  (expected False)
+Canonical(o) after lineage tamper = False  (expected False)
+
+========================================================================
+4) Tamper scenario D: evidence bytes altered after commitment
+========================================================================
+  Evid: False -- evidence hash mismatch: committed 8780ab8ec32b..., actual 86adf4a5adaf... -- evidence was altered
+Verified(q) after evidence tamper = False  (expected False)
+
+========================================================================
+5) Understandable / Recoverable -- honest partial derivations
+========================================================================
+Identity/Prov/Evid/Indep/SemEq/Adv/RuleCompat reduce to a proof: a signature
+either verifies or it doesn't, a hash either matches or it doesn't. Understanding
+is a different kind of predicate -- there's no signature that proves a human (or a
+model) actually understood something. What CAN be made real is a structural proxy:
+documentation completeness, not comprehension.
+  Understandable (proxy): True -- rationale=24 words (>= 8), 1 evidence ref(s)
+  Recoverable (ledger-derived): True -- 1 prior ledgered canonical snapshot(s) to roll back to
+
+========================================================================
+ALL SCENARIOS BEHAVED AS EXPECTED -- clean evidence verifies, each of the 4
+distinct tamper types is caught with its own specific cause, and the kernel.py
+composite logic (Canonical/CanonicalChange/Verified) required ZERO changes.
+========================================================================
