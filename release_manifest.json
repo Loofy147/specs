@@ -1,6 +1,6 @@
 {
   "version": "2.0.0-canonical-signed",
-  "timestamp": "2026-07-13T19:52:05.356313+00:00",
+  "timestamp": "2026-07-13T20:18:28.098716+00:00",
   "artifacts": {
     "governance_math.tex": "a2cd4a6f5ecdc8f1a0758e77be89d3f8e1eb229ecf0317e8610fb4c7019f790c",
     "kernel.py": "1c8293f0a9da76df3e5b1c25d1d2bca168a771f7f9a5e2605b2ecdeefa3cca10",
@@ -8,8 +8,8 @@
     "smt_theorems.py": "56319f9c5eb5d90d6ca651a9483439f64887f9c70e7e1abc48335aa5b2844815",
     "pki.py": "0b57ae7740c7875855e4d550fe17497bdf7aab63af9a8c9d162a221bdc5afcd5"
   },
-  "signer_public_key": "1149144af0375b7c4b2ee9dc6a7b80807d9ee31efe2ffe7d7febae2f907eacd7",
-  "signer_fingerprint": "6e6544ddba483b91",
-  "signature": "de96547b41d843d1bc5bedb189a595c04a69727bd0219ffb79b27cfd4142ad8470ff642f56c64f96fe748851587f83711b357f383ff6d2fdb1780ed9e95fcd05",
+  "signer_public_key": "47bbebb777be29e08a9705392ea1fe23fe8f896c09449eaab5d32bebea383619",
+  "signer_fingerprint": "2ee29adf7cdd0926",
+  "signature": "1e51f568cf882403e58e39696b9fe69d088d799341f193a7aebbde79d2f7b211d442767b4d8b37946a62b46caf56cb99617682406d4489c51068aea17eceb50c",
   "status": "FROZEN_AND_LOCKED"
 }
