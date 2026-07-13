@@ -241,6 +241,19 @@ report("Recovery Path Guaranteed: CONTAINED -> RECOVERY -> CANONICAL  [Int]", re
 # 7) Witnessed Comprehensibility for Understandable as a Structural Proof.
 #    Proves that any document meeting the structural requirements of minimum
 #    word count and evidence pointers meets the Understandable obligation.
+#
+#    PROOFS & PROXY BOUNDARY WARNING:
+#    It is critical to document the mathematical and semantic proof boundary
+#    around the Understandable predicate. Unlike cryptographic proofs of identity,
+#    authenticity, or integrity (such as Ed25519 signatures or SHA-256 hash chains
+#    which provide definitive mathematical verification), cognitive understanding is
+#    inherently non-cryptographic and cannot be directly proved.
+#
+#    Thus, this theorem verifies a STRUCTURAL PROXY (Witnessed Comprehensibility) rather
+#    than cognitive/semantic comprehension itself. We prove that a document complies
+#    with structural rules (e.g. word count, evidence references, risk disclosures),
+#    leaving the validation of actual semantic coherence as an intentional, visible boundary
+#    where human audit and formal structure meet.
 # ---------------------------------------------------------------------------
 
 hr("7) Witnessed Comprehensibility for Understandable (structural proof)")
@@ -276,6 +289,57 @@ report("Witnessed Comprehensibility: Structurally compliant docs are Understanda
 
 
 # ---------------------------------------------------------------------------
+# 8) Inductive Invariant for Append-Only Ledger History (unbounded history)
+#    Proves mathematically that updates to the ledger preserve all historical
+#    records, so that no past entry can be deleted or altered (uniqueness).
+#    State is represented by:
+#      - N (Int): current ledger length
+#      - L (Array Int -> Int): mapping ledger indices to recorded versions
+#
+#    Transition T(S, S_next):
+#      - N_next == N + 1
+#      - v_new (Int): new version to append
+#      - L_next == Store(L, N, v_new)
+#
+#    Theorem (Append-Only):
+#      For all indices i: (0 <= i < N) => L_next[i] == L[i]
+# ---------------------------------------------------------------------------
+
+hr("8) Inductive Invariant for Append-Only Ledger History (unbounded history)")
+
+N_ap = z3.Int("N_ap")
+L_ap = z3.Array("L_ap", z3.IntSort(), z3.IntSort())
+
+N_ap_next = z3.Int("N_ap_next")
+L_ap_next = z3.Array("L_ap_next", z3.IntSort(), z3.IntSort())
+v_new = z3.Int("v_new")
+
+# Transition: append one item at index N_ap
+T_ap = z3.And(
+    N_ap_next == N_ap + 1,
+    L_ap_next == z3.Store(L_ap, N_ap, v_new)
+)
+
+# Inductive hypothesis: N_ap >= 0
+inv_ap = N_ap >= 0
+
+idx = z3.Int("idx")
+# The Append-Only theorem: any previously recorded index remains identical in the next state
+append_only_theorem = z3.Implies(
+    inv_ap,
+    z3.ForAll([idx], z3.Implies(
+        z3.And(0 <= idx, idx < N_ap),
+        L_ap_next[idx] == L_ap[idx]
+    ))
+)
+
+s8 = z3.Solver()
+s8.add(T_ap, z3.Not(append_only_theorem)) # negation of the theorem
+result8 = s8.check()
+report("Inductive Step: Append-Only History Preserved  [Array, unbounded history]", result8)
+
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 
@@ -287,3 +351,4 @@ print("4) Trust-decay clamp monotonicity    :", "PROVEN" if result4 == z3.unsat 
 print("5) Ledger version monotonicity       :", "PROVEN" if result5 == z3.unsat else "NOT proven")
 print("6) Recovery path guaranteed          :", "PROVEN" if result6 == z3.unsat else "NOT proven")
 print("7) Witnessed comprehensibility       :", "PROVEN" if result7 == z3.unsat else "NOT proven")
+print("8) Append-only ledger history        :", "PROVEN" if result8 == z3.unsat else "NOT proven")

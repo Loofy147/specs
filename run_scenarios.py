@@ -319,6 +319,24 @@ o_x_only = make_object("policy-200", checks={"identity": False})  # I false, X t
 check("X true alone cannot make CanonicalChange true if base Canonical is false",
       (not Canonical(o_x_only)) and (not CanonicalChange(o_x_only)))
 
+# Check strict schema validation on construction
+try:
+    make_object("policy-invalid-checks", checks={"misspelled_key": True})
+    strict_schema_validation_passed = False
+except KeyError:
+    strict_schema_validation_passed = True
+check("misspelled or unknown checks keys fail fast with KeyError on construction",
+      strict_schema_validation_passed)
+
+# Check strict schema validation on access c()
+try:
+    o_x_only.c("unknown_key_access")
+    strict_access_validation_passed = False
+except KeyError:
+    strict_access_validation_passed = True
+check("accessing unknown checks keys fails fast with KeyError via c()",
+      strict_access_validation_passed)
+
 # large ledger: append 500 entries, confirm integrity, tamper mid-chain, confirm detection
 stress_ledger = Ledger()
 for i in range(500):

@@ -40,6 +40,30 @@ from typing import Callable, Dict, List, Optional, Set, Tuple, Any
 # 1) Primitives -- Gamma(o) envelope
 # ---------------------------------------------------------------------------
 
+ALLOWED_CHECK_KEYS = {
+    "identity",
+    "evidence_valid",
+    "verification_valid",
+    "understandable",
+    "recoverable",
+    "evolution_valid",
+    "prov",
+    "evid",
+    "indep",
+    "sem_eq",
+    "adv",
+    "rule_compat",
+    "drift",
+    "mismatch",
+    "compromise",
+    "nullified",
+    "repair_plan",
+    "rollback_avail",
+    "reverify",
+    "reviewable"
+}
+
+
 @dataclass
 class GovernanceObject:
     id: str
@@ -61,8 +85,20 @@ class GovernanceObject:
     # engineering addition: the atomic-predicate bag (see module docstring, pt.1)
     checks: Dict[str, bool] = field(default_factory=dict)
 
+    def __post_init__(self):
+        # Validate that all keys belong to the strict allowed schema
+        for key in list(self.checks.keys()):
+            if key not in ALLOWED_CHECK_KEYS:
+                raise KeyError(f"Invalid or misspelled atomic predicate key in checks: {key}")
+        # Explicitly populate any missing allowed keys with False so there are no silent omissions
+        for key in ALLOWED_CHECK_KEYS:
+            if key not in self.checks:
+                self.checks[key] = False
+
     def c(self, name: str) -> bool:
         """Look up an atomic predicate; missing == not-yet-established == False."""
+        if name not in ALLOWED_CHECK_KEYS:
+            raise KeyError(f"Invalid or misspelled atomic predicate key: {name}")
         return bool(self.checks.get(name, False))
 
 

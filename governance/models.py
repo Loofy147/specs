@@ -93,6 +93,18 @@ class VerificationPackage(BaseModel):
         return v.strip()
 
 
+class UnderstandingWitness(BaseModel):
+    """
+    A formal structural witness proving human-auditable comprehension.
+    This is an auditable comprehension record, NOT a cryptographic proof.
+    """
+    purpose_summary: str = Field(..., description="Auditable description of purpose.")
+    dependency_path: List[str] = Field(..., description="Verification/dependency paths.")
+    critical_path_explanation: str = Field(..., description="Explanation of critical paths.")
+    reviewer_signature: str = Field(..., description="Signature of the human reviewer.")
+    checklist: Dict[str, bool] = Field(..., description="Bounded checklist of understood components.")
+
+
 class UnderstandingLayer(BaseModel):
     """
     Contains a human-auditable summary of purpose, structure, critical path,
@@ -104,6 +116,7 @@ class UnderstandingLayer(BaseModel):
     major_risks: List[str] = Field(..., default_factory=list, description="Major identified risks.")
     current_uncertainties: List[str] = Field(..., default_factory=list, description="Current uncertainties.")
     operational_boundaries: List[str] = Field(..., default_factory=list, description="Operational boundaries or constraints.")
+    understanding_witness: Optional[UnderstandingWitness] = Field(None, description="Auditable structural witness comprehension record.")
 
     @field_validator("purpose_summary", "rule_architecture_summary", "critical_path_explanation")
     @classmethod

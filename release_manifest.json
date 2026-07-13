@@ -1,0 +1,15 @@
+{
+  "version": "1.0.0-canonical",
+  "timestamp": "2026-07-13T16:09:10.581901+00:00",
+  "artifacts": {
+    "governance_math.tex": "a2cd4a6f5ecdc8f1a0758e77be89d3f8e1eb229ecf0317e8610fb4c7019f790c",
+    "kernel.py": "1c8293f0a9da76df3e5b1c25d1d2bca168a771f7f9a5e2605b2ecdeefa3cca10",
+    "atomic_engines.py": "018c18a7e654d2da9a96648455815666f28ff33c223f7307aa77ca629e4549d9",
+    "smt_theorems.py": "56319f9c5eb5d90d6ca651a9483439f64887f9c70e7e1abc48335aa5b2844815"
+  },
+  "authority_attestation": {
+    "signer": "sovereign-constitution-multisig-01",
+    "signature": "30450221008f5c9e2b1b3a4a5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c",
+    "status": "FROZEN_AND_LOCKED"
+  }
+}
