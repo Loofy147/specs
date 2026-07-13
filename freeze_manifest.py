@@ -2,37 +2,59 @@ import hashlib
 import json
 import datetime
 
-def compute_sha256(filepath):
-    with open(filepath, "rb") as f:
-        return hashlib.sha256(f.read()).hexdigest()
+import pki
 
-files_to_freeze = {
+FILES_TO_FREEZE = {
     "governance_math.tex": "governance_math.tex",
     "kernel.py": "kernel.py",
     "atomic_engines.py": "atomic_engines.py",
-    "smt_theorems.py": "smt_theorems.py"
+    "smt_theorems.py": "smt_theorems.py",
+    "pki.py": "pki.py",
 }
 
-manifest = {
-    "version": "1.0.0-canonical",
-    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-    "artifacts": {}
-}
 
-for key, path in files_to_freeze.items():
-    try:
-        manifest["artifacts"][key] = compute_sha256(path)
-    except FileNotFoundError:
-        print(f"Warning: {path} not found.")
+def compute_sha256(filepath: str) -> str:
+    with open(filepath, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
 
-# Add a signed attestation by the sovereign authority key (simulated/committed)
-manifest["authority_attestation"] = {
-    "signer": "sovereign-constitution-multisig-01",
-    "signature": "30450221008f5c9e2b1b3a4a5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c",
-    "status": "FROZEN_AND_LOCKED"
-}
 
-with open("release_manifest.json", "w") as f:
-    json.dump(manifest, f, indent=2)
+def canonical_payload(manifest_body: dict) -> bytes:
+    """Deterministic byte encoding of exactly what gets signed."""
+    return json.dumps(manifest_body, sort_keys=True).encode()
 
-print("MANIFEST CREATED SUCCESSFULLY")
+
+def build_and_sign(root: pki.KeyPair) -> dict:
+    artifacts = {}
+    for key, path in FILES_TO_FREEZE.items():
+        try:
+            artifacts[key] = compute_sha256(path)
+        except FileNotFoundError:
+            print(f"Warning: {path} not found, skipping.")
+
+    body = {
+        "version": "2.0.0-canonical-signed",
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "artifacts": artifacts,
+        "signer_public_key": root.public_bytes().hex(),
+        "signer_fingerprint": root.fingerprint(),
+    }
+    payload = canonical_payload(body)
+    signature = root.sign(payload)
+
+    manifest = dict(body)
+    manifest["signature"] = signature.hex()
+    manifest["status"] = "FROZEN_AND_LOCKED"
+    return manifest
+
+
+if __name__ == "__main__":
+    # Generate a fresh keypair for manifest signing
+    root = pki.generate_keypair()
+    manifest = build_and_sign(root)
+
+    with open("release_manifest.json", "w") as f:
+        json.dump(manifest, f, indent=2)
+
+    print("MANIFEST CREATED AND GENUINELY SIGNED")
+    print(f"  signer fingerprint: {manifest['signer_fingerprint']}")
+    print(f"  signature length:   {len(bytes.fromhex(manifest['signature']))} bytes (Ed25519 = 64)")

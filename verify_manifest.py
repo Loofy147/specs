@@ -11,7 +11,7 @@ import hashlib
 import json
 
 import pki
-from freeze_manifest_real import canonical_payload, compute_sha256
+from freeze_manifest import canonical_payload, compute_sha256
 
 
 def verify(manifest_path: str) -> tuple:
@@ -47,27 +47,12 @@ def verify(manifest_path: str) -> tuple:
 
 if __name__ == "__main__":
     import sys
-    import dataclasses as dc
-
-    print("=" * 72)
-    print("1) Verify the OLD fake manifest (release_manifest.json)")
-    print("=" * 72)
-    try:
-        with open("release_manifest.json") as f:
-            old = json.load(f)
-        sig_bytes = bytes.fromhex(old["authority_attestation"]["signature"])
-        print(f"  claimed signature: {len(sig_bytes)} bytes")
-        print(f"  Ed25519 requires:  64 bytes")
-        print(f"  no 'signer_public_key' field exists anywhere in this manifest to check it against.")
-        print(f"  RESULT: not independently verifiable -- fails before any crypto check is even possible.")
-    except Exception as e:
-        print(f"  could not even attempt verification: {e}")
 
     print()
     print("=" * 72)
-    print("2) Verify the NEW genuinely-signed manifest (release_manifest_signed.json)")
+    print("1) Verify the genuinely-signed manifest (release_manifest.json)")
     print("=" * 72)
-    ok, reasons = verify("release_manifest_signed.json")
+    ok, reasons = verify("release_manifest.json")
     for name, r_ok, detail in reasons:
         print(f"  [{'PASS' if r_ok else 'FAIL'}] {name}: {detail}")
     print(f"OVERALL: {'VALID' if ok else 'INVALID'}")
@@ -75,9 +60,9 @@ if __name__ == "__main__":
 
     print()
     print("=" * 72)
-    print("3) Tamper test A: flip one byte of the real signature")
+    print("2) Tamper test A: flip one byte of the real signature")
     print("=" * 72)
-    with open("release_manifest_signed.json") as f:
+    with open("release_manifest.json") as f:
         tampered = json.load(f)
     sig = bytearray(bytes.fromhex(tampered["signature"]))
     sig[0] ^= 0xFF
@@ -92,11 +77,11 @@ if __name__ == "__main__":
 
     print()
     print("=" * 72)
-    print("4) Tamper test B: edit kernel.py after it was frozen (drift, signature untouched)")
+    print("3) Tamper test B: edit kernel.py after it was frozen (drift, signature untouched)")
     print("=" * 72)
     with open("kernel.py", "a") as f:
         f.write("\n# innocuous trailing comment added after freeze\n")
-    ok3, reasons3 = verify("release_manifest_signed.json")
+    ok3, reasons3 = verify("release_manifest.json")
     for name, r_ok, detail in reasons3:
         print(f"  [{'PASS' if r_ok else 'FAIL'}] {name}: {detail}")
     print(f"OVERALL: {'VALID' if ok3 else 'INVALID'}  (expected INVALID -- drift, even with a valid signature)")
